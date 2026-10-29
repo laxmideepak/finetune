@@ -12,7 +12,7 @@ project:
 
 user_decisions:
   labeled_data: "none yet; i2b2/n2c2-2006 DUA path to pursue and verify"
-  teacher_model: "undecided (research question: cloud-on-public-data vs private-hosted)"
+  teacher_model: "RATIFIED 2026-10-28: cloud-on-public-data first (cloud APIs only for public/de-identified corpora); privately-hosted gpt-oss-20B as second-stage route re-evaluated at Phase 3 gate; no raw ePHI to any cloud API regardless"
   deployment: "flexible compute purchasing; cost-per-million-snippets is deciding metric"
   experiment_budget: "$50-200 total; ~$20-100 for first public-data sweep"
   phi_policy: "public-data experiments anywhere; real-EHR work only in approved environment (Azure-level BAA)"

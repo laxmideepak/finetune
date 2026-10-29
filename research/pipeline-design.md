@@ -226,12 +226,11 @@ Status legend: [x] ingested+verified into design; [ ] queued.
 - E4 (cost baseline): benchmark local R and simple call rate ⇒ provisional $/M table at H=T4/L4/A10G rates (verified pricing) — sanity-check H0-ARCH magnitude before real spend.
 Gate: all pass → implementation wave 1 begins on real tobacco data (SHAC→i2b2 when DUA lands).
 
-## 15. Open decisions for ratification (recommended defaults marked ★)
-1. **Crop granularity ★** sentence-aligned merged windows w/ ±100 default radius + evidence-density ordering (alternative: raw ±100 fixed windows; alternative: pure sentences). Rationale: survives truncation budget while preserving negation clauses; matches winners-mechanism precedent (S-1/S-7).
-2. **One-year rule adoption ★** adopt i2b2's (quit <1 yr ⇒ CURRENT) for v1 (alternative: reject; affects i2b2 harmonized benchmark comparability). Verified consequence example: "quit 4 months ago" = CURRENT under rule.
-3. **Aggregation precedence ★** i.e., rules above (alternative: trained stacking, rejected for auditability).
-4. **Teacher default ★** privately-hosted gpt-oss-20B validated-on-public-first (alternative: cloud-on-public-only). Zero ePHI egress by policy.
-5. **INSTANCE of challenge split location** — locked test from local future corpus? or from each public corpus? Current design: per-corpus locked tests + eventual local-locked test (pending institutional access).
+## 15. RATIFIED decisions (2026-10-28, user)
+1. **Crop granularity ✍ RATIFIED ★**: sentence-aligned merged windows w/ ±100 default radius + evidence-density ordering.
+2. **One-year rule ✍ RATIFIED ★**: adopt i2b2's (quit <1 yr ⇒ CURRENT) for v1; consequence documented ("quit 4 months ago" = CURRENT).
+3. **Teacher route ✍ RATIFIED (user selection, modified from ★)**: **cloud-on-public-data first** — cloud APIs (cheapest experiments) restricted to public/de-identified corpora; privately-hosted gpt-oss-20B becomes the second-stage route when teacher labeling approaches real-corpus or cost scales (re-evaluated at Phase 3 gate). ePHI wall unchanged: no raw ePHI to any cloud API regardless.
+4. Challenge-split location: per-corpus locked tests + eventual local-locked test (pending institutional access) — unchanged.
 
 ## 16. Traceability (evidence anchors)
 - i2b2 rules/counts/κ/α: S-1 (PMC2274873, verified word-for-word).
