@@ -30,7 +30,7 @@ def row(**overrides: str) -> dict[str, str]:
         "leakage_group": "g1",
         "label_policy_version": POLICY_VERSION,
         "label_source": "human",
-        "retrieval_version": "retrieval-v1",
+        "retrieval_version": "retrieval-v2",
         "example_mode": "note-context",
         "label_scope": "note",
         "crop_id": "note",

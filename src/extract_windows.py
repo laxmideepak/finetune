@@ -35,12 +35,14 @@ from bisect import bisect_left, bisect_right
 from dataclasses import asdict, dataclass, field
 from typing import Any, Iterable
 
-RETRIEVAL_VERSION = "retrieval-v1"
+RETRIEVAL_VERSION = "retrieval-v2"
 
 # Recall-first lexicon from Stage 2. "toxic habits" is the verified UW synonym.
+# v2 (E0, Wright benchmark): adds the shorthand behind 24 of v1's 27 misses (of 2,750
+# known-status notes): "Tob:", "+tob", "nonsmoker", "pkyr", "pk-yr", "pack-yrs".
 CANDIDATES = re.compile(
-    r"\b(?:smok\w*|tobacc\w*|cigar\w*|cigaret\w*|cig\w*|nicotin\w*|"
-    r"pack[\s-]*years?|ppd|pack[s]?\s*(?:a|per)?\s*day|cigs?\w*|"
+    r"\b(?:(?:non-?)?smok\w*|tobacc\w*|tob|cigar\w*|cigaret\w*|cig\w*|nicotin\w*|"
+    r"pack[\s-]*y(?:ea)?rs?|pk[\s-]*y(?:ea)?rs?|pkyrs?|ppd|pack[s]?\s*(?:a|per)?\s*day|cigs?\w*|"
     r"hookah|shisha|snuff|chew\w*|vap(?:e|es|ed|ing)\w*|e-?cig\w*|"
     r"toxic\s+habits?)\b",
     re.IGNORECASE,
