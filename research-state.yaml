@@ -31,15 +31,18 @@ literature:
     - id: "external-report2"
       path: "research/external-report2-guide-2026-10-28.md"
       summary: "Deeper guide: BioClinical-ModernBERT #1, Ettin 32M student, verified dataset census (i2b2 502=398/104), 7-arm matrix, HIPAA/pricing, starter scripts"
-  verified: []            # claims Phase 1 must verify against primary sources
+  verified:
+    - "i2b2-2006: 502 (398/104) CONFIRMED from primary paper Uzuner et al. JAMIA 2008 (PMC2274873); exact 5-label definitions incl. one-year rule, marijuana excluded, secondhand->Non-Smoker, verbatim test dist (Past 11/Current 11/Smoker 3/Non-Smoker 16/Unknown 63); best 2006 = sentence-level+rules (micro 0.90/macro 0.76)"
+    - "BioClinical-ModernBERT-base card/license/commit (thomas-sounack): MIT, ~150M, MLM on MIMIC corpus, Social History bench 58.5"
+    - "Ettin encoder 32M (jhu-clsp): MIT, paired 17M-1B suite; 400M encoder > 1B decoder on classification"
+    - "Qwen3.5-0.8B: exists, Apache-2.0, vision+GatedDeltaNet hybrid; Qwen3.5-2B exists; AutoModelForMultimodalLM loader"
+    - "SDOH-NLI: tasksource/SDOH-NLI, CC-BY-4.0, ungated; mirror splits sum 29,335 (resolves 29,635-vs-29,335 mismatch)"
+    - "SHAC: RELEASED + accessible (README 2025-07-07): DUA + PhysioNet credentialing via Google access form (two-gated)"
+    - "HF Jobs GPU prices (2026-10-28): T4 $0.40, L4 $0.80, A10G $1.00, L40S $1.80, A100-80 $2.50, H200 $5.00, RTX PRO 6000-96GB $2.75/h; per-minute billing"
+    - "JAMIA Open 2026 (PMID 41542317): gpt-oss-20B F1 0.99 vs cTAKES 0.97 tobacco extraction zero-shot, 250 notes, k=0.91, 3-class labels"
   unverified_to_check:
-    - "i2b2-2006 502 docs (398/104), DBMI portal DUA process, one-year rule"
-    - "BioClinical-ModernBERT-base card/license/commit (thomas-sounack)"
-    - "Ettin encoder 32M/17M (jhu-clsp), MIT license"
-    - "Qwen3.5-0.8B existence/license/vision component"
-    - "SDOH-NLI CC-BY-4.0 + mirror count mismatch (29,635 vs 29,335)"
-    - "SHAC release status (README contradictions)"
-    - "HF Jobs & other providers GPU prices (Oct 2026 snapshot)"
+    - "n2c2 portal DUA fee/turnaround — BLOCKED: portal TLS cert expired; user must sign manually when site returns"
+    - "Lambda/Modal/RunPod/Azure live GPU prices — re-verify at purchase time"
   open_problems:
     - "No controlled comparison exists for exact setting (4 labels, ±100 crops, patient-disjoint eval, cost-per-million) — our benchmark fills the gap"
     - "i2b2 test set has only 11 current/11 former — minority-class evidence thin"
