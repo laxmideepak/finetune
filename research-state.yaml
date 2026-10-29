@@ -22,6 +22,8 @@ direction:
   primary_adapted_from: "external-report2-guide-2026-10-28.md"
   first_build: "BioClinical-ModernBERT-base full FT (4-way head) + Ettin-32M alongside, on human-adjudicated data; encoder-first, LLM as challenger"
   experiment_order: "TF-IDF floor + MiniLM/SetFit -> BioClinical-ModernBERT (3 seeds) -> ModernBERT control -> Ettin-32M -> Qwen3-0.6B LoRA -> Qwen3.5-0.8B -> distillation only if justified"
+  design_contract: "research/pipeline-design.md (v0.9, 2026-10-28) — architecture stages 0-9, study queue S-1..S-20, boundary tests B1-B11, smoke experiments E0-E4; all implementation must conform and print deviations to research-log.md"
+  design_method: "brainstorming-research-ideas frameworks F1-F10 applied; 6 tensions, fault-injection matrix, stakeholder rotation, simplicity-test arm justification"
 
 literature:
   key_sources:
@@ -88,9 +90,9 @@ experiments:
   trajectory: []
 
 outer_loop:
-  cycle: 0
-  last_direction: null
-  last_reflection: "Bootstrapped from approved plan + two external reports; Phase-1 verification sweep in progress"
+  cycle: 1
+  last_direction: "Design-research pass complete: pipeline-design.md v0.9 (10 stages, 6 tensions reconciled, 11 boundary tests, 20-item study queue S-1..S-20 with 10 more ingested this pass incl. ModernBERT blog, TRL SFT docs, MiniLM card — all verified first-hand). Awaiting 4 ratifications (§15) + smoke wave E0-E4 (zero-DUA) before implementation wave 1."
+  last_reflection: "2019-2026 literature converged on our architecture (sentence/snippet-level + rules/aggregate, deployed examples 0.94-0.99 F1); our delta is the cost frontier ($/M quantified vs 2026 cloud $120-6,610/M) + conservative-UNKNOWN crop-label discipline + patient-disjoint controlled comparison. Teacher route upgraded to privately-hosted gpt-oss-20B (verified 0.99 F1 tobacco zero-shot, JAMIA Open 2026)."
 
 workspace:
   findings: "findings.md"
