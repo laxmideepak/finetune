@@ -1,0 +1,102 @@
+# Research State — Central Project Tracking
+# Updated by the agent after each experiment and reflection.
+# Seeded from MASTER_CONTEXT.md + two external researcher reports (see research/).
+
+project:
+  title: "Lightweight Smoking-Status Classification from EHR Snippets"
+  question: "What is the smallest, most accurate, most economical open-source model and training strategy for classifying smoking status (CURRENT/FORMER/NEVER/UNKNOWN) from regex-extracted ~±100-token EHR note snippets at million-snippet scale?"
+  status: active
+  started: "2026-10-28"
+  domain: "clinical NLP / efficient LLM fine-tuning / knowledge distillation"
+  master_context: "MASTER_CONTEXT.md"   # richest context file; read in every session
+
+user_decisions:
+  labeled_data: "none yet; i2b2/n2c2-2006 DUA path to pursue and verify"
+  teacher_model: "undecided (research question: cloud-on-public-data vs private-hosted)"
+  deployment: "flexible compute purchasing; cost-per-million-snippets is deciding metric"
+  experiment_budget: "$50-200 total; ~$20-100 for first public-data sweep"
+  phi_policy: "public-data experiments anywhere; real-EHR work only in approved environment (Azure-level BAA)"
+  task_definition: "note-level status at note's reference time; longitudinal reconciliation excluded"
+
+direction:
+  primary_adapted_from: "external-report2-guide-2026-10-28.md"
+  first_build: "BioClinical-ModernBERT-base full FT (4-way head) + Ettin-32M alongside, on human-adjudicated data; encoder-first, LLM as challenger"
+  experiment_order: "TF-IDF floor + MiniLM/SetFit -> BioClinical-ModernBERT (3 seeds) -> ModernBERT control -> Ettin-32M -> Qwen3-0.6B LoRA -> Qwen3.5-0.8B -> distillation only if justified"
+
+literature:
+  key_sources:
+    - id: "external-report1"
+      path: "research/external-report-2026-10-28.md"
+      summary: "Researcher report: Qwen3-0.6B LoRA first generative, MiniLM/SetFit baseline, label policy, TRL skeleton, cloud options"
+    - id: "external-report2"
+      path: "research/external-report2-guide-2026-10-28.md"
+      summary: "Deeper guide: BioClinical-ModernBERT #1, Ettin 32M student, verified dataset census (i2b2 502=398/104), 7-arm matrix, HIPAA/pricing, starter scripts"
+  verified: []            # claims Phase 1 must verify against primary sources
+  unverified_to_check:
+    - "i2b2-2006 502 docs (398/104), DBMI portal DUA process, one-year rule"
+    - "BioClinical-ModernBERT-base card/license/commit (thomas-sounack)"
+    - "Ettin encoder 32M/17M (jhu-clsp), MIT license"
+    - "Qwen3.5-0.8B existence/license/vision component"
+    - "SDOH-NLI CC-BY-4.0 + mirror count mismatch (29,635 vs 29,335)"
+    - "SHAC release status (README contradictions)"
+    - "HF Jobs & other providers GPU prices (Oct 2026 snapshot)"
+  open_problems:
+    - "No controlled comparison exists for exact setting (4 labels, ±100 crops, patient-disjoint eval, cost-per-million) — our benchmark fills the gap"
+    - "i2b2 test set has only 11 current/11 former — minority-class evidence thin"
+    - "Local retrieval recall + ±100 context-loss rate unknown for their corpus"
+
+hypotheses:
+  - id: H0-ARCH
+    statement: "A fully fine-tuned clinical encoder (BioClinical-ModernBERT 150M or smaller) matches or beats a fine-tuned sub-1B generative LLM on 4-class snippet classification while being >10x faster/cheaper per snippet at inference."
+    status: pending   # becomes testable once data exists (Phase 3)
+    motivation: "Both external reports converge on encoder-first; never tested on user's corpus."
+    parent: null
+    priority: high
+  - id: H1-DATA
+    statement: "Snippet-label/full-note-label dual-target plus conservative UNKNOWN policy yields a student that abstains correctly rather than guessing (measurable: hallucinated-FORMER/NEVER rates on context-insufficient crops)."
+    status: pending
+    motivation: "Guide#2's crop-labeling rule; prevents tiny-window guessing."
+    parent: null
+    priority: high
+  - id: H2-CONTEXT
+    statement: "±100-token windows lose decisive evidence on a measurable fraction of their corpus; a section-aware route + low-confidence context-expansion fallback recovers most of it at modest cost increase."
+    status: pending
+    motivation: "Retrieval is a tuned hyperparameter; validated by retrieval audit + ablation (±50/100/200/section)."
+    parent: null
+    priority: high
+  - id: H3-DISTILL
+    statement: "Ettin-32M distilled from a validated BioClinical-ModernBERT teacher retains within ~1 macro-F1 of the teacher (deploy smallest within tolerance)."
+    status: pending
+    motivation: "Final compression experiment; hard-label first, soft (alpha/T) as dev-tuned extension; pseudo<=human count rule."
+    parent: null
+    priority: medium
+  - id: H4-TEACHER
+    statement: "Teacher-assisted labeling with DSPy-optimized prompts (MIPROv2) improves gold+reviewed training data enough to justify pipeline complexity, without ever treating teacher output as ground truth."
+    status: pending
+    motivation: "Only after human-only baseline exists; keep locked test outside all optimization."
+    parent: null
+    priority: medium
+
+experiments:
+  proxy_metric: "macro-F1 (primary), CURRENT-recall (safety floor), per-class P/R, patient-cluster bootstrap CIs; then throughput/latency and $/million snippets"
+  baseline_value: null     # TF-IDF + cosine LLM zero-shot arms first after data
+  best_value: null
+  total_runs: 0
+  trajectory: []
+
+outer_loop:
+  cycle: 0
+  last_direction: null
+  last_reflection: "Bootstrapped from approved plan + two external reports; Phase-1 verification sweep in progress"
+
+workspace:
+  findings: "findings.md"
+  log: "research-log.md"
+  literature_dir: "literature/"
+  experiments_dir: "experiments/"
+  to_human_dir: "to_human/"
+  paper_dir: "paper/"
+
+continuity:
+  mode: "in-session continuous (OpenCode has no /loop or cron.add; OpenCode-compat substitute)"
+  rule: "Keep research-state.yaml + findings.md updated after every action so any future session resumes seamlessly."
