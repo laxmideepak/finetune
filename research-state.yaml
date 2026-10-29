@@ -22,7 +22,7 @@ direction:
   primary_adapted_from: "external-report2-guide-2026-10-28.md"
   first_build: "BioClinical-ModernBERT-base full FT (4-way head) + Ettin-32M alongside, on human-adjudicated data; encoder-first, LLM as challenger"
   experiment_order: "TF-IDF floor + MiniLM/SetFit -> BioClinical-ModernBERT (3 seeds) -> ModernBERT control -> Ettin-32M -> Qwen3-0.6B LoRA -> Qwen3.5-0.8B -> distillation only if justified"
-  design_contract: "research/pipeline-design.md (v0.9.1, 2026-10-28) — architecture stages 0-9, study queue S-1..S-24 (S-7/S-9/S-11/S-12/S-13 full texts ingested; S-10 closed as resolved-in-S-9), boundary tests B1-B11, smoke experiments E0-E4 (E2 = Wright synthetic benchmark, located), harmonization register §9-4.3, risks R1-R7; all implementation must conform and print deviations to research-log.md"
+  design_contract: "research/pipeline-design.md (v0.9.1, 2026-10-28) — architecture stages 0-9, study queue S-1..S-25 (S-7/S-9/S-11/S-12/S-13/S-25 full texts ingested; S-10 closed as resolved-in-S-9), boundary tests B1-B11, smoke experiments E0-E4 (E2 = Wright synthetic benchmark, located), harmonization register §9-4.3, risks R1-R7; all implementation must conform and print deviations to research-log.md"
   design_method: "brainstorming-research-ideas frameworks F1-F10 applied; 6 tensions, fault-injection matrix, stakeholder rotation, simplicity-test arm justification"
 
 literature:
@@ -48,6 +48,7 @@ literature:
     - "SmokeBERT (JCO CCI 2025, PMID 41325572): fine-tuned ClinicalBERT F1 0.97 holdout / 0.86 external on 6 quantitative smoking variables vs gpt-oss-20B 0.72-0.79 → teacher scope = 4-class status only; Palmer 2019 (PMID 31340796): status F1 0.90 on i2b2-2006 + local; regex quit-date 63.2% sens = the hard field; HHS de-id anchor: Expert Determination + Safe Harbor (reviewed 2025-02-03, via Wayback; direct 403)"
     - "KOTI/Alleva full text (BMC MIDM 2025, PMID 40611214): Smk = N2C2 smoking challenge 502 notes, 4-class (smoker+current merged), 398/104 split; smoking few-shot prompting weak (macro-F1 0.347-0.471 at N=10-50; zero-shot 0.13-0.18) vs full-FT 0.85+ → fallback-only (F7); smoking gain = keyword-anchored truncation vs tail-trunc (+15.8-21.6% p<0.001), template insertion itself ns (+2.9-3.4%); decoder reordering hurt BioGPT on Smk (-10.1% p=0.018) → G-arm source order; 98% notes >512 tokens → bounded crops over chunked inference; code github.com/eugenial/koti"
     - "SHAC JBI appendix tables: 3,136/448/896 train/dev/test over 12 annotation rounds (MIMIC+UW); AL query tuning best sum/maximum a=0.1 = 0.794 vs random 0.752 (+0.042 macro-F1) → +0.07 headline was current-Tobacco-Status-specific; overall AL gain modest"
+    - "Dedup paper full text (arXiv 2312.09469, Landi/Alleva): smoking task again n2c2 smoking challenge 398/104 4-class; full cross-patient train-side dedup HARMFUL for smoking (-11.9% ClinicalBERT / -32.6% GatorTron micro-F1 — smoking evidence lives in copy-forward text); within-note + boilerplate removal helpful (+14.2%); duplication census 33-54.2% of clinical text; B7 mitigation rewired; prompt-verbalizer ceiling 0.67 micro-F1 at full data vs classifier-head full-FT 0.85-0.90 (Palmer) → C-arm choice confirmed"
   unverified_to_check:
     - "n2c2 portal DUA fee/turnaround — BLOCKED: portal TLS cert expired; user must sign manually when site returns"
     - "Lambda/Modal/RunPod/Azure live GPU prices — re-verify at purchase time"
@@ -97,8 +98,8 @@ experiments:
 
 outer_loop:
   cycle: 1
-  last_direction: "Deferred-item pass complete (design v0.9.1 elaborated): S-10 closed (Alleva=KOTI; no follow-up exists), KOTI full text ingested — its smoking task IS the N2C2 challenge predecessor of our task, few-shot prompting insufficient for 4-class status, trigger-anchored windows already deliver the smoking placement gain, decoder arm keeps source order; SHAC appendix tables read (AL lift modest overall). Remaining deferred: S-17 verify-in-code, S-18 (Phase 3+), S-19 (conditional), S-20 (optional), Landi/Alleva dedup paper (optional, B7-adjacent). E0-E4 zero-DUA smokes are the next gate."
-  last_reflection: "Few-shot prompting on 4-class smoking status plateaus at macro-F1 0.35-0.47 (KOTI full text, best encoders) — data volume, not prompting cleverness, is the binding constraint on the status head; the true placement lever for smoking is evidence-in-window vs tail-truncation (+15.8-21.6% F1), which our crop design already realizes; decoder-side input reordering is an unverified risk (BioGPT smoking drop) and is now forbidden in the G-arm contract."
+  last_direction: "All deferred reads complete (design v0.9.1 elaborated): KOTI full text (S-9) + dedup paper (S-25) ingested; S-10 closed (Alleva=KOTI, no follow-up); B7 mitigation rewritten — patient-disjoint eval + within-note dedupe + boilerplate filter, never cross-patient train-side dedup (smoking evidence lives in copy-forward text: −11.9/−32.6 F1 under full dedup); queue S-1..S-25 fully resolved. Next gate: E0–E4 zero-DUA smokes."
+  last_reflection: "Three same-task studies triangulate our arm choice: prompt-verbalizer encoders plateau at 0.35–0.67 F1 on the 4-class smoking challenge (KOTI few-shot ≤100 examples; dedup paper at FULL data) vs classifier-head full-FT 0.85–0.90 — encoder arm must use a classifier head; the placement lever is evidence-in-window (+15.8–21.6% F1 vs tail-truncation), already realized by trigger-anchored crops; duplication is 33–54% of clinical text but only within-note/boilerplate dedup helps smoking."
 
 workspace:
   findings: "findings.md"
