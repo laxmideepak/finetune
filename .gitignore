@@ -1,1 +1,65 @@
+# Python
 __pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Test / tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# macOS
+.DS_Store
+
+# ---------------------------------------------------------------------------
+# Data and patient-adjacent artifacts
+# Raw notes, adjudication sheets, mappings, and derived datasets must never be
+# committed. The only CSV files allowed are synthetic test fixtures.
+# ---------------------------------------------------------------------------
+data/**
+!data/.gitkeep
+datasets/
+corpora/
+patient_mappings/
+*.phi
+*.csv
+!tests/fixtures/**
+!requirements*.txt
+
+# Training / evaluation outputs
+runs/
+outputs/
+checkpoints/
+experiments/**
+!experiments/.gitkeep
+to_human/**
+!to_human/.gitkeep
+paper/**
+!paper/.gitkeep
+
+# Model weights and prediction artifacts
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.npz
+*.npy
+
+# Secrets
+.env
+.env.*
+credentials*
+secrets*
+*.key
+*.pem
+
+# Logs
+*.log

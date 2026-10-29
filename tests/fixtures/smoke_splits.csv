@@ -1,0 +1,17 @@
+example_id,corpus_id,text,label,patient_id,note_id,split,leakage_group,label_policy_version,label_source,retrieval_version,example_mode,label_scope,crop_id,unknown_reason
+syn-001,synthetic-smoke,Patient currently smokes one pack per day,CURRENT,p001,n001,train,g001,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-002,synthetic-smoke,Patient smokes daily,CURRENT,p002,n002,train,g002,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-003,synthetic-smoke,Patient quit smoking two years ago,FORMER,p003,n003,train,g003,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-004,synthetic-smoke,Former smoker quit five years ago,FORMER,p004,n004,train,g004,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-005,synthetic-smoke,Patient never smoked,NEVER,p005,n005,train,g005,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-006,synthetic-smoke,Never a smoker,NEVER,p006,n006,train,g006,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-007,synthetic-smoke,Patient smoking status is not documented,UNKNOWN,p007,n007,train,g007,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,no-mention
+syn-008,synthetic-smoke,No smoking information available,UNKNOWN,p008,n008,train,g008,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,no-mention
+syn-009,synthetic-smoke,Patient currently smokes cigars,CURRENT,p009,n009,dev,g009,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-010,synthetic-smoke,Patient quit smoking three years ago,FORMER,p010,n010,dev,g010,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-011,synthetic-smoke,Patient never used tobacco,NEVER,p011,n011,dev,g011,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-012,synthetic-smoke,Smoking history unavailable,UNKNOWN,p012,n012,dev,g012,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,no-mention
+syn-013,synthetic-smoke,Patient smokes a pipe daily,CURRENT,p013,n013,test,g013,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-014,synthetic-smoke,Former smoker quit ten years ago,FORMER,p014,n014,test,g014,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-015,synthetic-smoke,Patient has never smoked,NEVER,p015,n015,test,g015,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,
+syn-016,synthetic-smoke,Tobacco use not mentioned,UNKNOWN,p016,n016,test,g016,smoking-status-v1,synthetic-reference,retrieval-v1,note-context,note,note,no-mention

@@ -1,0 +1,5 @@
+# Generative arm. Use a SEPARATE environment from the encoder arm: TRL/transformers
+# API drift is risk R5. These pins resolve against transformers 4.57.0.
+-r requirements-core.txt
+peft==0.21.2
+trl==0.29.1
