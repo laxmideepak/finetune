@@ -22,7 +22,7 @@ direction:
   primary_adapted_from: "external-report2-guide-2026-10-28.md"
   first_build: "BioClinical-ModernBERT-base full FT (4-way head) + Ettin-32M alongside, on human-adjudicated data; encoder-first, LLM as challenger"
   experiment_order: "TF-IDF floor + MiniLM/SetFit -> BioClinical-ModernBERT (3 seeds) -> ModernBERT control -> Ettin-32M -> Qwen3-0.6B LoRA -> Qwen3.5-0.8B -> distillation only if justified"
-  design_contract: "research/pipeline-design.md (v0.9, 2026-10-28) — architecture stages 0-9, study queue S-1..S-20, boundary tests B1-B11, smoke experiments E0-E4; all implementation must conform and print deviations to research-log.md"
+  design_contract: "research/pipeline-design.md (v0.9.1, 2026-10-28) — architecture stages 0-9, study queue S-1..S-24 (S-7/S-11/S-12/S-13 full texts ingested), boundary tests B1-B11, smoke experiments E0-E4 (E2 = Wright synthetic benchmark, located), harmonization register §9-4.3, risks R1-R7; all implementation must conform and print deviations to research-log.md"
   design_method: "brainstorming-research-ideas frameworks F1-F10 applied; 6 tensions, fault-injection matrix, stakeholder rotation, simplicity-test arm justification"
 
 literature:
@@ -42,6 +42,9 @@ literature:
     - "SHAC: RELEASED + accessible (README 2025-07-07): DUA + PhysioNet credentialing via Google access form (two-gated)"
     - "HF Jobs GPU prices (2026-10-28): T4 $0.40, L4 $0.80, A10G $1.00, L40S $1.80, A100-80 $2.50, H200 $5.00, RTX PRO 6000-96GB $2.75/h; per-minute billing"
     - "JAMIA Open 2026 (PMID 41542317): gpt-oss-20B F1 0.99 vs cTAKES 0.97 tobacco extraction zero-shot, 250 notes, k=0.91, 3-class labels"
+    - "SHAC full (JBI 2021 PMC7856628 + ocad012 PMC10354764): tobacco Status {none,current,past} + Duration/History/Type/Amount/Frequency; 4,480(2021)->4,405(2022 harmonized); trigger kappa 0.94-0.97; Subtask-B cross-domain drop 0.901->0.774 = risk R7; two-gated access (PhysioNet + UW DUA) confirmed"
+    - "Wright E2 benchmark LOCATED: github.com/vclic/smokingbenchmark (3,000 notes + labels, CC-BY-4.0) + smokingeval; label rules CONFLICT with ratified one-year rule (any quit=>FORMER; never=<100 cigs) — §9-4.3 register; E2 comparability set only"
+    - "MSEP full + Lybarger ocad073: LLM-prompt 12-24 s/sentence/35GB vs CamemBERT 0.09-0.12 s/2GB; 19% of current tobacco users documented only-in-narrative (UW 225,089 patients); MSEP same-patient fold leakage 3-8% (validates patient-disjoint splits)"
   unverified_to_check:
     - "n2c2 portal DUA fee/turnaround — BLOCKED: portal TLS cert expired; user must sign manually when site returns"
     - "Lambda/Modal/RunPod/Azure live GPU prices — re-verify at purchase time"
@@ -91,8 +94,8 @@ experiments:
 
 outer_loop:
   cycle: 1
-  last_direction: "Design-research pass complete: pipeline-design.md v0.9 (10 stages, 6 tensions reconciled, 11 boundary tests, 20-item study queue S-1..S-20 with 10 more ingested this pass incl. ModernBERT blog, TRL SFT docs, MiniLM card — all verified first-hand). Awaiting 4 ratifications (§15) + smoke wave E0-E4 (zero-DUA) before implementation wave 1."
-  last_reflection: "2019-2026 literature converged on our architecture (sentence/snippet-level + rules/aggregate, deployed examples 0.94-0.99 F1); our delta is the cost frontier ($/M quantified vs 2026 cloud $120-6,610/M) + conservative-UNKNOWN crop-label discipline + patient-disjoint controlled comparison. Teacher route upgraded to privately-hosted gpt-oss-20B (verified 0.99 F1 tobacco zero-shot, JAMIA Open 2026)."
+  last_direction: "Full-text integration pass complete (design v0.9.1): MSEP/Wright/SHAC×2 full texts + SDOH-NLI abstract ingested; E2 benchmark located (vclic/smokingbenchmark); harmonization register §9-4.3 added; risk R7 added; queue at S-24 with 4 small items left (S-15 HHS, S-16 SetFit, S-23 SmokeBERT, S-24 Palmer)."
+  last_reflection: "Cross-corpus generalization is now the top pre-registered empirical risk (R7; ocad012 −13pp precedent); four label taxonomies conflict at boundaries → §9-4.3 register keeps comparisons clean; cost frontier sharpened (prompt caching −47%; Jev input-option payload ~15k tokens)."
 
 workspace:
   findings: "findings.md"

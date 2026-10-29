@@ -1,4 +1,6 @@
-# Pipeline Design v0.9 — Smoking-Status Extraction from EHR Note Crops
+# Pipeline Design v0.9.1 — Smoking-Status Extraction from EHR Note Crops
+
+> v0.9.1 (same day): full-text integration pass — S-7/S-11/S-12/S-13 fully ingested, cross-dataset harmonization register added (§9-4.3), risk R7 added, study queue extended to S-24, E2 benchmark located.
 Compiled 2026-10-28 by the design-research pass (user directive: "design and research the pipeline extensively before implementation").
 Method: applied brainstorming-research-ideas frameworks (F1–F10) to our specific pipeline; every factual claim is anchored to a verified primary source (see §16). This document is the design contract for the implementation stage; changes go through the decision log in research-log.md.
 
@@ -53,7 +55,7 @@ Each row = a boundary our system must survive or knowingly fail-safe; test enter
 | B4 | "secondhand smoke exposure" | NEVER or CURRENT confusion | verified i2b2 rule: secondhand ⇒ Non-Smoker-family; but our 4-label policy routes to UNKNOWN unless lifetime non-use explicit — ratify (recommended: unknown, exposed≠never) | challenge set entry |
 | B5 | marijuana-only smoking | GENEROUS jamais→NEVER | verified i2b2 rule: marijuana excluded from tobacco smoking status | challenge set entry |
 | B6 | regex-negative note containing "smoker's house", "smoke alarm", "no smoking today due to surgery" (ad-hoc triggers) | retrieval miss or false positive | regex-v2 recall-first patterns + unknown_reason=retrieval-negative + audit of random regex-negative sample | random sample audit (n=200)
-| B7 | near-duplicate/copied notes across patients (templates) | train-test leakage inflating scores | patient-disjoint splits + note-hash dedupe + template-cluster checks | leakage checker script
+| B7 | near-duplicate/copied notes across patients (templates) | train-test leakage inflating scores | patient-disjoint splits + note-hash dedupe + template-cluster checks (verified cautionary instance: MSEP's 3–8% same-patient sentence overlap across CV folds — real-world teams miss this) | leakage checker script
 | B8 | crops where evidence text sits exactly at boundary | silent truncation of the decisive clause | truncation refusal (raise, never silently elide — guide#2 script), boundary markers `«…»` visible | fuzz test
 | B9 | mixed-length batch on small GPU | padding waste / OOM | ModernBERT unpadding+BF16; MPS: small batch, grad-ckpt (verified OOM lesson) | throughput benchmark E4
 | B10 | model over-confident on ambiguous crop | review-channel never triggers | calibration via temperature/logit threshold on dev; report AURC-style risk-coverage curve | calibration eval
@@ -90,6 +92,7 @@ Sequencing adopted: E1–E2 zero-DUA smokes → arms A/B/C/D (first fine-tune wa
 
 - **Decompose 4-way → per-status binary heads**: MSEP (verified, deployed macro-F>0.94 on 5/6 conditions) proves per-class heads are production-viable; registered as our T6 ablation after baseline. Simplicity test says: do NOT start there. Start with single head.
 - **Compose KOTI-style evidence placement + our windows**: put the instruction/template adjacent to the strongest snippet rather than tail-truncation — verified +8–24% encoder F1 (Alleva BMC MIDM 2025) — as determinism the crops aren't sorted by source order by default (evidence-density ordering; boundaries preserved).
+- **Compose CHOP's trigger-focused argument resolution (ocad012 2nd place)**: they improved argument subtype resolution by setting segment IDs=1 on the target trigger; ModernBERT has no token_type_ids (S-4) so the encoder arm cannot copy this directly — the generative arm (G) can exploit the same idea by inlining the trigger in the prompt, and the encoder arm leans on our evidence-density ordering instead.
 - **Decompose aggregation** into explicit precedence rules (affirmative patient-specific evidence > negated statement resolution > family-history exclusion > temporal one-year rule application) instead of learned weighting — matches the verified 2006 winners' structure (sentence-level→rules) and keeps the aggregation auditable at the human level.
 - **Compose measurement-error correction (Lee & Wood-Doughty arXiv 2411.03004)**: our pipeline emits confusion-matrix artifacts enabling downstream cat-error correction without extra work — slicing a research bonus out of eval boxes.
 
@@ -115,6 +118,7 @@ Sequencing adopted: E1–E2 zero-DUA smokes → arms A/B/C/D (first fine-tune wa
 - Mechanism (from `src/extract_windows.py` verified regex + guide#2 broadened lexicon): `smok\w*, tobac\w*, cigar\w*, cigaret\w*, nicotine, pack[s]?[- ]?year, [0-9]+ *(ppd|pack[s]? *(a|per)?day), cigs?\w*, hookah, shisha, snuff, chew\w*, (vape|vaping|e-?cig\w*)` (vaping flagged as separate variable, label-scope decision pending); capture ALL matches; emit:
   - `trigger_metadata`: {pattern_id, span, section_id, sent_id, is_negated_family_margin (negation handling left to classifier, retrieval stays recall-first)}
 - Audit lane: sample regex-negative notes (random n=200 + enriched n=50 prioritized) — tagged FN prevalence; report separately (adopted rule).
+- Verified vocabulary/template gaps to cover from ocad012's cross-domain error analysis: "toxic habits" (UW synonym phrase for substance/tobacco use); "nicotine" already in lexicon; and **unpopulated template slots ("Tobacco use: _") which generated cross-zone FPs** → rule: empty-value template lines are evidence of unknown_reason=no-mention, never affirmative.
 - Decision: no stepping-up to embedding retrieval (MiniLM/all-mpnet) in v0.9 — match i2b2 winners' insight that feature-set is small; revisit if audit FN prevalence > 5%.
 
 ### Stage 3 — Crop construction
@@ -134,7 +138,13 @@ Sequencing adopted: E1–E2 zero-DUA smokes → arms A/B/C/D (first fine-tune wa
   - UNKNOWN: missing/unresolvable/third-party-only/contradictory/retrieval-negative
   - Escape rules (needed for markup): "denies smoking" alone ⇒ UNKNOWN unless explicit past context (⇒ FORMER, verified i2b2 escape analog); "quit <1 yr" ⇒ CURRENT if one-year rule adopted
 - Provenance per row: label_source (gold/teacher/hybrid), annotator_ids, evidence offsets, unknown_reason, conflict_flag, review_date.
-- i2b2 harmonization mapping (verified distribution, §9-4.2): Past→FORMER; Current→CURRENT; Smoker→UNKNOWN_reason=timing-unresolved; Non-Smoker→NEVER; Unknown→UNKNOWN_reason=no-mention. Emit both original-label and harmonized benchmark files, never mixed.
+- 9-4.3 Cross-dataset harmonization register (added 2026-10-28; every corpus's label file emitted separately, never mixed):
+  | Corpus | Native status taxonomy | Mapping → our 4-way | Conflict / notes |
+  |---|---|---|---|
+  | i2b2-2006 | Past / Current / Smoker / Non-Smoker / Unknown | §9-4.2 mapping | Ratified one-year rule = i2b2's own rule ✓ full continuity |
+  | SHAC (tobacco events, per section) | Status ∈ {none, current, past}; absent event = no mention | none→NEVER (explicit denial/none only); current→CURRENT; past→FORMER; absent→UNKNOWN_reason=no-mention | SHAC "none" includes denials; recent-quitter cases unverified — audit at accession |
+  | Wright LCS synthetic | per-history fields + eligibility decisions; never = <100 lifetime cigarettes; any documented quit ⇒ FORMER (even e-cig/NRT switch) | map to their task format for comparability only | **Conflicts with ratified one-year rule**: "quit 4 months ago" ⇒ FORMER here vs CURRENT in our v1. Use as E2 pipeline-comparability set + label-policy sensitivity study, never as gold. Never definition (<100 cigs) matches CDC convention — useful anchor |
+  | SDOH-NLI | entail / contradict / neutral per hypothesis | not a label source (format/smoke only) | — |
 
 ### Stage 5 — Model arms (configs locked for implementation wave 1)
 - C (primary): BioClinical-ModernBERT-base + 4-way head. lr {1e-5, 2e-5, 5e-5}, eff batch 32, ≤5 epochs w/ early stopping on dev macro-F1, max_len 512, BF16, 3 seeds; truncation refusal; no token_type_ids (verified ModernBERT architecture).
@@ -193,13 +203,13 @@ Status legend: [x] ingested+verified into design; [ ] queued.
 | S-4 | ModernBERT blog (Dec 2024) | 5,3 | no token_type_ids (collator!), FA2, alternating attn 128-local + global-every-3, unpadding | [x] |
 | S-5 | BioClinical-ModernBERT HF card (thomas-sounack) | 5 | MIT, 150M, corpus incl. glossary, Social-History bench 58.5 | [x] |
 | S-6 | TRL SFTTrainer docs (current) | 5(G) | verified completion_only_loss/packing/model_init_kwargs/eos_token defaults; Qwen3-0.6B quickstart; DFT optional | [x] |
-| S-7 | MSEP paper (JMIR 2026, PMC13044345) | 2,5,6 | sentence-level classes (presence/absence/unknown), annotation speeds, rule-vs-learned sparse-class finding | [x] (abstract-level facts extracted; full-text deep-read queued for Stage-2 splitter design) |
+| S-7 | MSEP paper (JMIR 2026, PMC13044345) | 2,5,6 | FULL TEXT ingested 2026-10-28. Added: LLM-prompt arm (Mixtral-8×7B) intermediate & heavy — 12–24 s/sentence, 35GB GPU vs CamemBERT 0.09–0.12 s, 2GB; rules WIN sparse classes (family-hx macro-F 0.94±7.9% vs CamemBERT 0.73±17%) but CamemBERT wins smoking (F 95%); annotation 1.2–2.9 s/sentence (vs NER 7.82–16.48 s); active learning REJECTED (updates distorted by majority samples) — note tension w/ SHAC where AL succeeded; **verified leakage instance: dedupe pre-CV but no patient stratification → 3–8% same-patient sentences across folds** (our B7/Stage-8 forbids exactly this); doc-type/section shifts meaning ("hypertension" chronic in Past Med Hx vs acute in daily note) → section-aware data selection justified; preannotation bias monitored via 10% non-preannotated sentences; low-prevalence statuses effectively binary | [x] full |
 | S-8 | Dávila-García JAMIA Open 2026 (PMC12803785) | 5(G), 9 | gpt-oss-20B 0.99 vs cTAKES 0.97; 2.5–14.5 s/note; 3-class labels caveat | [x] (abstract verified; full table of per-model scores queued) |
 | S-9 | KOTI paper (BMC MIDM 2025, PMC12224782) | 3 | template placement effect sizes; encoder-vs-decoder asymmetry | [x] (abstract verified) |
 | S-10 | Alleva follow-up: few-shot curves | 5 | whether 8/class few-shot carries our class imbalance | [ ] (prob not needed pre-implementation) |
-| S-11 | Wright LCS preprint (medRxiv 2026-09.24) full + benchmark availability link | 3,8,9 | downloadable benchmark; condition-wise costs; Jev structured-model design | [x] abstract; [ ] locate benchmark download |
-| S-12 | SHAC corpus paper Lybarger et al. JBI 2021 + n2c2/UW 2022 overview (JAMIA 2023 ocad012) | 4,11 | format, event schema, exact section rules | [x] headline facts (4,405 sections, two-gated access); [ ] full schema read planned Phase 2 |
-| S-13 | SDOH-NLI paper arXiv 2310.18431 | 11 | NLI category definitions, why it ≠ smoking labels (hard constraint) | [x] existence+license verified; [ ] schema read at E0 |
+| S-11 | Wright LCS preprint (medRxiv 2026-09.24) | 3,8,9 | FULL TEXT ingested; **benchmark LOCATED: github.com/vclic/smokingbenchmark (3,000 notes + reference labels, CC-BY-4.0) + github.com/vclic/smokingeval (prompts, schemas, frozen hashes, all 15 runs' predictions)**. Costs/1k: Luna $0.12–0.21, Jev $0.61–0.64, Sol $2.44–4.22, Haiku $3.37–4.43, Sonnet $3.76–6.61; prompt caching −47% (Sonnet), Haiku uncacheable (<4,096-token prefix); Jev ≈15k input tokens/note (answer-options dominate; input $0.042/M, output free, latency 0.45–1.21 s); quit-date errors → 12/14 Jev FNs under USPSTF; sensitivity 0.957→0.993 under ACS ("evaluate against the rules you actually feed"); label rules = quit-however-recently ⇒ FORMER (even e-cig/NRT) + never = <100 lifetime cigarettes → **conflicts with ratified one-year rule, logged in §9-4.3**; template-shorthand notes HARDER than LLM-prose (evals need both formats); reference adjudication performed by an LLM (their stated limitation); benchmark built for $62.34; n2c2 portal datasets "temporarily unavailable" since Sep-2024 (consistent w/ our expired-TLS finding) | [x] full |
+| S-12 | SHAC: Lybarger JBI 2021 (PMC7856628) + n2c2/UW 2022 shared task (JAMIA ocad012, PMC10354764) | 4,11 | BOTH FULL TEXTS ingested 2026-10-28. Substance-use event schema: Status (required; **{none, current, past}**) + Duration/History/Type/Amount/Frequency span args; 4,480 sections (2021) vs **4,405 (2022 harmonized release = current PhysioNet number)** — discrepancy resolved; trigger κ 0.94–0.97 incl. Tobacco; active learning (surrogate classifier + diversity term, α=0.1) lifted current-Tobacco-Status +0.07 ΔF1 and risk-factor frequencies +83–151%; baseline extractor: Tobacco trigger 0.97, Status 0.90 F1; ocad012 top = Microsoft T5-large seq2seq 0.901/0.774/0.889 (A/B/C; paired bootstrap n=10k, note-level) → **Subtask-B cross-domain drop −13pp = pre-registered risk R7 for our cross-corpus eval**; named FN/FP causes: unpopulated templates ("Tobacco use: _") → FPs; vocabulary mismatch ("toxic habits", "nicotine"-as-tobacco) → FNs; multi-event notes degrade performance (density >1 harder); **conflicting intra-note statuses annotated as SEPARATE events** (supports our conflict-flag/precedence Stage-6 design); <2% events span sentences but the verified "quit" cue in an EARLIER sentence failing alone = direct precedent for sentence-merged crops; access = PhysioNet credentialing + UW DUA (two-gated, confirmed); scoring code github.com/Lybarger/brat_scoring | [x] full (JBI appendix tables skimmed only) |
+| S-13 | SDOH-NLI paper (arXiv 2310.18431, EMNLP 2023 Findings) | 11 | abstract verified 2026-10-28: NLI formulation — premises (clinical-note sentence segments) ↔ hypotheses (normalized status statements), independently drawn; confirms NOT a smoking-label corpus → E0-format exercising only, never a floor-arm data source | [x] (full schema wording verified at download time) |
 | S-14 | Ettin paper/blog (2025) | 5 | paired encoder-decoder suite findings, 32M capacity claims | [x] headline (400M-encoder>1B-decoder classification claim); [ ] not blocking implementation |
 | S-15 | HHS de-identification & cloud guidance pages | 0 | HIPAA boundaries verbatim (supporting T5 language) | [x] via guide#2 citations; [ ] direct fetch queued for Stage-0 signer trail |
 | S-16 | SetFit docs (SBERT) | 5(B) | few-shot regime details if 8/class experiment runs | [ ] (prunable w/ arm B result) |
@@ -207,6 +217,10 @@ Status legend: [x] ingested+verified into design; [ ] queued.
 | S-18 | i2b2-2014 risk-factor dataset docs | later | longitudinal extension viability (heart disease; smoking risk factor labels) | [ ] (Phase 3+) |
 | S-19 | UMLS NegEx/ConText (negation scope tooling) | 1,4 | negation handling depth decision | [ ] (only if Stage-2 audit shows negation confusions) |
 | S-20 | vLLM ModernBERT support page (comment-thread claim) | 9 | serving engine availability for encoder | [ ] (opt. serving optimization) |
+| S-21 | Lybarger et al., JAMIA 2023 ocad073 (PMC10354760) — NLP-augmenting structured SDOH data | 2,8 | ingested via PubMed abstract 2026-10-28. SDOH extractor 0.86 F1; UW case study 225,089 patients / 430,406 social-hx notes: 32% homeless, **19% of current tobacco users**, 10% drug users have the risk factor ONLY in narrative → quantified structured-vs-text information gain (deployment motivation); frame precisely: motivates text extraction, NOT a regex-failure rate | [x] |
+| S-22 | Prado et al., BMJ Open 2023 (PMC10124310) — lung-cancer symptoms case-control | peripheral | reviewed via abstract 2026-10-28: smoking-status-matched controls; no extraction methodology our design needs | [x] (peripheral; no follow-up) |
+| S-23 | SmokeBERT (Xue et al., JCO Clinical Cancer Informatics 2025; Wright ref-21) | 5 | BERT-based quantitative smoking-history extraction for LCS — direct comparator lineage for encoder arms | [ ] abstract queued |
+| S-24 | Palmer et al., BMC MIDM 2019 (Wright ref-19) — tobacco user registry, multiple behaviors | 2,6 | pack-years + behaviors from notes — informs sideways scope (pack-years) and Stage-6 aggregation | [ ] abstract queued |
 
 ## 13. Risk register & kill criteria
 | Risk | Signal | Mitigation | Kill criterion |
@@ -217,11 +231,12 @@ Status legend: [x] ingested+verified into design; [ ] queued.
 | R4 budget blow-out | cumulative spend > $120 before first fine-tune wave | stick to zero-DUA + local MPS first wave; only then paid wave | pause, re-plan |
 | R5 TRL/transformers version drift regresses starter | smoke fails on API | pin working env; fork guide scripts | n/a (measured failure → fix pins) |
 | R6 teacher route adopted by accident into eval | teacher score used as truth anywhere | locked human test only; eval gates in code | any occurrence = restart eval round |
+| R7 cross-corpus degradation | trained-arm macro-F1 drops >8pp between public-corpus evals and local/synthetic evals (verified precedent: n2c2/UW Subtask B — 0.901 in-domain → 0.774 cross-domain, −13pp MIMIC→UW) | per-corpus locked tests (Stage 8); doc-type/section-aware data selection (S-7 lesson); E2 dual-format check | if local in-domain data can't be brought above the deployment gate by teacher-assisted bootstrapping (H4), escalate to local annotation before any scope expansion |
 
 ## 14. Zero-DUA smoke experiments (E0–E4) — pre-implementation validation
 - E0 (corpus format + retrieval sanity): SDOH-NLI premises → run extract_windows.py → trigger-scan stats (does regex over-fire? merge correct? offsets roundtrip?) Metrics: crops/note, token distributions vs predicted smoke budget, merge ratio.
 - E1 (encoding stack smoke): load BioClinical-ModernBERT-base on MPS small batch, forward+backard on toy 512-token batch; record MPS R; settle version pin.
-- E2 (end-to-end dry run): synthetic LCS notes (if S-11 benchmark available) → full pipeline (triggers→crops→C-config 3-epochs toy→aggregate→report queue) to validate the code path + metrics plumbing before touching any real labeled corpus.
+- E2 (end-to-end dry run): **the Wright synthetic benchmark (3,000 notes, CC-BY-4.0, github.com/vclic/smokingbenchmark — located 2026-10-28)** → full pipeline (triggers→crops→C-config 3-epochs toy→aggregate→report queue) to validate the code path + metrics plumbing before touching any real labeled corpus. Cautions: LLM-adjudicated references (their limitation) → treat as pipeline-comparability set, never gold; include BOTH template-shorthand and LLM-prose notes (verified difficulty difference); label mapping per §9-4.3, and run the one-year-rule sensitivity slice on it.
 - E3 (arm A discipline): TF-IDF on same synthetic slice — confirm floor arm not embarrassing (validates report template).
 - E4 (cost baseline): benchmark local R and simple call rate ⇒ provisional $/M table at H=T4/L4/A10G rates (verified pricing) — sanity-check H0-ARCH magnitude before real spend.
 Gate: all pass → implementation wave 1 begins on real tobacco data (SHAC→i2b2 when DUA lands).
@@ -238,3 +253,7 @@ Gate: all pass → implementation wave 1 begins on real tobacco data (SHAC→i2b
 - ModernBERT/TRL/MiniLM: S-4/S-5/S-6 + MiniLM card (verified 256wp/128-train, Apache-2.0).
 - HF Jobs pricing table verified 2026-10-28 (T4 $.40 / L4 $.80 / A10G $1 / L40S $1.80 / A100-80 $2.50 / H200 $5 / RTX-PRO6000 $2.75).
 - SHAC release form + SDOH-NLI license/ungated: tasksource card + Lybarger README (verified).
+- SHAC full texts: JBI 2021 (PMC7856628) event schema/AL/extraction tables + n2c2/UW ocad012 (PMC10354764) subtasks/tables — verified 2026-10-28.
+- Wright benchmark URL: Data Availability section of the preprint (github.com/vclic/smokingbenchmark, CC-BY-4.0).
+- Information-gain motivation: Lybarger ocad073 (PMC10354760) — 19% current-tobacco narrative-only.
+- Label-policy conflicts + per-corpus mappings: §9-4.3 register.
