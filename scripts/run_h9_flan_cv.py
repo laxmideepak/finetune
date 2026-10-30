@@ -51,6 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--folds", default="0,1,2,3,4")
     parser.add_argument("--wright-dev", action="store_true", help="also score zero-shot on Wright dev (native)")
     parser.add_argument("--optimizer", choices=("adamw", "adafactor"), default="adamw")
+    parser.add_argument("--cv-seed", type=int, default=0, help="StratifiedKFold random_state (H9: 0; H16: 1-3)")
     args = parser.parse_args(argv)
 
     import torch
@@ -62,7 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     out.mkdir(parents=True, exist_ok=True)
     sdoh = add_evidence(load_sdoh(Path(args.sdoh_dir), "train")).reset_index(drop=True)
     y = sdoh["label_native"].to_numpy()
-    folds = list(StratifiedKFold(5, shuffle=True, random_state=0).split(sdoh, y))
+    folds = list(StratifiedKFold(5, shuffle=True, random_state=args.cv_seed).split(sdoh, y))
 
     def with_evidence(texts: pd.Series, fn) -> np.ndarray:
         pred = np.full(len(texts), "UNKNOWN", dtype=object)
