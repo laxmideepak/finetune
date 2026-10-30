@@ -93,14 +93,16 @@ experiments:
   proxy_metric: "macro-F1 (primary), CURRENT-recall (safety floor), per-class P/R, patient-cluster bootstrap CIs; then throughput/latency and $/million snippets"
   baseline_value: null     # TF-IDF + cosine LLM zero-shot arms first after data
   best_value: null
-  total_runs: 8   # E3 TF-IDF dev runs on Wright (2 label views x 2 inputs x 2 models), 2026-10-29
+  total_runs: 18   # 8 E3 TF-IDF dev runs (2026-10-29) + 10 H5 dev arm scorings (2026-10-30)
   trajectory:
     - {date: "2026-10-29", exp: "E3", arm: "A-svm", data: "wright-dev", labels: "native", input: "crops", macro_f1: 0.979, note: "comparability only; A at ceiling"}
     - {date: "2026-10-29", exp: "E3", arm: "A-svm", data: "wright-dev", labels: "one-year", input: "crops", macro_f1: 0.888, note: "errors = date arithmetic"}
+    - {date: "2026-10-30", exp: "H5", arm: "A-native+quit-resolver-v1", data: "wright-dev", labels: "one-year-v1", input: "crops", macro_f1: 0.947, note: "recent quitters 6/6; bottleneck now native status on basic notes"}
+    - {date: "2026-10-30", exp: "H5", arm: "A-native+quit-resolver-v1", data: "wright-dev", labels: "one-year-v2", input: "full-note resolver", macro_f1: 0.957, note: "exploratory"}
 
 outer_loop:
   cycle: 1
-  last_direction: "2026-10-29: partial E0–E4 wave run (docs/results/e-wave-1-results-2026-10-29.md): retrieval-v2 lexicon (FN 27→3 of 2,750), TF-IDF floor 0.979 native / 0.888 one-year on Wright dev, note date must enter the input, CPU E4 ≈ $19–25/M for base encoder. Next: HF-reachable re-run of E0 with ModernBERT tokenizer; E2 arm C + E4 on GPU. PREVIOUS: All deferred reads complete (design v0.9.1 elaborated): KOTI full text (S-9) + dedup paper (S-25) ingested; S-10 closed (Alleva=KOTI, no follow-up); B7 mitigation rewritten — patient-disjoint eval + within-note dedupe + boilerplate filter, never cross-patient train-side dedup (smoking evidence lives in copy-forward text: −11.9/−32.6 F1 under full dedup); queue S-1..S-25 fully resolved. Next gate: E0–E4 zero-DUA smokes."
+  last_direction: "2026-10-30: H5-DATE supported — native-status classifier + rule-based quit resolver lifts one-year macro-F1 0.888→0.947 (crops)/0.957 (full note) on Wright dev; bottleneck = native status on short template notes (basic 0.898). Next: H6-STATUS (status classifier on template shorthand), H2-CONTEXT (±1 sentence for FORMER crops), GPU case for encoder arms. PREVIOUS: 2026-10-29: partial E0–E4 wave run (docs/results/e-wave-1-results-2026-10-29.md): retrieval-v2 lexicon (FN 27→3 of 2,750), TF-IDF floor 0.979 native / 0.888 one-year on Wright dev, note date must enter the input, CPU E4 ≈ $19–25/M for base encoder. Next: HF-reachable re-run of E0 with ModernBERT tokenizer; E2 arm C + E4 on GPU. PREVIOUS: All deferred reads complete (design v0.9.1 elaborated): KOTI full text (S-9) + dedup paper (S-25) ingested; S-10 closed (Alleva=KOTI, no follow-up); B7 mitigation rewritten — patient-disjoint eval + within-note dedupe + boilerplate filter, never cross-patient train-side dedup (smoking evidence lives in copy-forward text: −11.9/−32.6 F1 under full dedup); queue S-1..S-25 fully resolved. Next gate: E0–E4 zero-DUA smokes."
   last_reflection: "Three same-task studies triangulate our arm choice: prompt-verbalizer encoders plateau at 0.35–0.67 F1 on the 4-class smoking challenge (KOTI few-shot ≤100 examples; dedup paper at FULL data) vs classifier-head full-FT 0.85–0.90 — encoder arm must use a classifier head; the placement lever is evidence-in-window (+15.8–21.6% F1 vs tail-truncation), already realized by trigger-anchored crops; duplication is 33–54% of clinical text but only within-note/boilerplate dedup helps smoking."
 
 workspace:

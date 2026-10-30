@@ -18,6 +18,9 @@ What is the smallest, most accurate, most economical open-source model and train
 
 ## Key Results
 
+- **H5-DATE (2026-10-30, Wright dev, comparability only) — the one-year rule is a rule, not a pattern.** A native-status classifier (TF-IDF SVM) followed by a train-only rule-based quit-time resolver plus the note date scores **0.947 macro-F1 (crops) / 0.957 (full-note resolver)** vs 0.888 for the same features learning the one-year labels directly; recent quitters 0/6 → 6/6; "former, timing unclear" UNKNOWN recall 0.08 → 0.92. With gold status the resolver alone reaches 0.971–0.981. The remaining error is native status on short template notes (`basic` 0.898), not dates. Design consequence: the deployed model's job is native status + evidence; the one-year rule is applied by a deterministic, auditable layer that needs the note date as metadata.
+- **E-wave-1 (2026-10-29)**: retrieval-v2 lexicon cut missed known-status notes 27 → 3 of 2,750; crops beat full notes for the TF-IDF floor (+2.7 to +4.2 points); Wright native labels are too easy to rank neural arms (TF-IDF 0.979); CPU fp32 base encoder ≈ 2.2 snippets/s (≈ $19–25/M).
+
 (no training runs yet — verification-phase results below, details in docs/literature/survey.md)
 
 1. **i2b2-2006 verified from the primary paper** (Uzuner et al., JAMIA 2008, PMC2274873). Both external reports were accurate (502 = 398+104), and we recovered the *exact* rules both reports only summarized: one-year rule (quit <1 yr ago → Current Smoker), Smoker → timing-unresolvable, marijuana excluded, secondhand → Non-Smoker, "No tobacco" → Non-Smoker. Test is tiny and Unknown-majority (63/104); Smoker has 3 test records → macro-F1 on this benchmark is structurally harsh. Best 2006 system = sentence-level extraction + rules (0.90 micro / 0.76 macro) — direct precedent for our snippet→aggregate architecture.
