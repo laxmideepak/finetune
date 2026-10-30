@@ -64,6 +64,15 @@ def main(argv: list[str] | None = None) -> int:
             zs = np.asarray(json.loads(path.read_text())["pred"], dtype=object)
             arms[f"Flan-T5-{size} zero-shot"] = zs
             arms[f"Flan-T5-{size} zero-shot + guard"] = guard(zs, sdoh["evid0"].tolist())
+    voters = ("TF-IDF (S)", "Flan-T5-base fine-tuned", "Flan-T5-large zero-shot + guard")
+    if all(v in arms and all(p is not None for p in arms[v]) for v in voters):
+        a, b, c = (arms[v] for v in voters)
+        # H11-VOTE: label given by >= 2 voters, else the fine-tuned Flan-T5-base label.
+        arms["H11 vote (TF-IDF, Flan-base FT, Flan-large ZS+guard)"] = np.asarray(
+            # If TF-IDF agrees with either Flan voter it is the majority; otherwise the Flan-base
+            # label is either the b==c majority or the all-differ tie-break.
+            [x if x in (y_, z) else y_ for x, y_, z in zip(a, b, c)], dtype=object
+        )
     ref = arms["TF-IDF (S)"]
     rng = np.random.default_rng(20261030)
     boots = [rng.integers(0, len(y), len(y)) for _ in range(args.n_bootstrap)]
