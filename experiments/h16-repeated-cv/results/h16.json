@@ -1,0 +1,137 @@
+{
+ "repeats": {
+  "1": {
+   "flan_pooled": 0.8569,
+   "tfidf_pooled": 0.8022,
+   "delta_4class": 0.0547,
+   "ci95_4class": [
+    -0.0117,
+    0.1221
+   ],
+   "delta_3class": 0.0046,
+   "ci95_3class": [
+    -0.0399,
+    0.0482
+   ],
+   "folds": [
+    {
+     "fold": 0,
+     "flan": 0.8162,
+     "tfidf": 0.8203
+    },
+    {
+     "fold": 1,
+     "flan": 0.8768,
+     "tfidf": 0.8316
+    },
+    {
+     "fold": 2,
+     "flan": 0.8153,
+     "tfidf": 0.8932
+    },
+    {
+     "fold": 3,
+     "flan": 0.9586,
+     "tfidf": 0.7677
+    },
+    {
+     "fold": 4,
+     "flan": 0.8349,
+     "tfidf": 0.7105
+    }
+   ],
+   "folds_won": 3
+  },
+  "2": {
+   "flan_pooled": 0.8215,
+   "tfidf_pooled": 0.7595,
+   "delta_4class": 0.062,
+   "ci95_4class": [
+    0.0003,
+    0.1282
+   ],
+   "delta_3class": 0.048,
+   "ci95_3class": [
+    0.0052,
+    0.0952
+   ],
+   "folds": [
+    {
+     "fold": 0,
+     "flan": 0.8822,
+     "tfidf": 0.8059
+    },
+    {
+     "fold": 1,
+     "flan": 0.9472,
+     "tfidf": 0.8298
+    },
+    {
+     "fold": 2,
+     "flan": 0.7656,
+     "tfidf": 0.8574
+    },
+    {
+     "fold": 3,
+     "flan": 0.8386,
+     "tfidf": 0.5967
+    },
+    {
+     "fold": 4,
+     "flan": 0.6722,
+     "tfidf": 0.6441
+    }
+   ],
+   "folds_won": 4
+  },
+  "3": {
+   "flan_pooled": 0.8842,
+   "tfidf_pooled": 0.774,
+   "delta_4class": 0.1102,
+   "ci95_4class": [
+    0.0456,
+    0.1776
+   ],
+   "delta_3class": 0.0291,
+   "ci95_3class": [
+    -0.0067,
+    0.0681
+   ],
+   "folds": [
+    {
+     "fold": 0,
+     "flan": 0.8494,
+     "tfidf": 0.6223
+    },
+    {
+     "fold": 1,
+     "flan": 0.8889,
+     "tfidf": 0.931
+    },
+    {
+     "fold": 2,
+     "flan": 0.9236,
+     "tfidf": 0.7203
+    },
+    {
+     "fold": 3,
+     "flan": 0.862,
+     "tfidf": 0.8019
+    },
+    {
+     "fold": 4,
+     "flan": 0.8952,
+     "tfidf": 0.7733
+    }
+   ],
+   "folds_won": 4
+  }
+ },
+ "summary": {
+  "mean_delta_4class": 0.0756,
+  "all_repeats_positive_4class": true,
+  "all_repeats_positive_3class": true,
+  "folds_won_total": 11,
+  "folds_total": 15
+ }
+}
