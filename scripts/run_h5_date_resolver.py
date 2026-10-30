@@ -52,6 +52,28 @@ def _crops(df: pd.DataFrame) -> pd.Series:
     )
 
 
+RELATIVE_SOURCES = ("years_ago", "relative_years")
+
+
+def one_year_label_v2(row: pd.Series) -> str:
+    """one-year labels with the relative-years fix (label deviation, research-log 14).
+
+    v1 derived the interval from the answer key's +-1 year range, so "quit 2 years ago"
+    straddled the boundary and became UNKNOWN. The label policy says "quit two years
+    ago" is FORMER. For relative statements the stated N is used: cessation lies in
+    [note - (N+1) years, note - N years], so any N >= 1 is FORMER.
+    """
+    if row["label_native"] != "FORMER" or row.get("quit_date_source") not in RELATIVE_SOURCES or not str(row.get("quit_date") or "").strip():
+        return row["label_one_year"]
+    note_day = date.fromisoformat(row["note_date"])
+    n = note_day.year - int(str(row["quit_date"])[:4])
+    earliest = note_day - pd.Timedelta(days=round((n + 1) * 365.25))
+    latest = note_day - pd.Timedelta(days=round(n * 365.25))
+    lo = status_from_cessation(max((note_day - latest).days, 0))[0]
+    hi = status_from_cessation((note_day - earliest).days)[0]
+    return lo if lo == hi else "UNKNOWN"
+
+
 def _oracle_quit(row: pd.Series) -> str:
     if row["label_native"] != "FORMER":
         return row["label_native"]
@@ -74,15 +96,16 @@ def _resolve_all(df: pd.DataFrame, status: pd.Series, source: str) -> tuple[list
     return labels, traces
 
 
-def _score(df: pd.DataFrame, pred) -> dict:
+def _score(df: pd.DataFrame, pred, label: str = "label_one_year") -> dict:
     pred = np.asarray(pred, dtype=object)
-    payload = metrics_payload(df["label_one_year"].to_numpy(), pred)
+    payload = metrics_payload(df[label].to_numpy(), pred)
+    payload["label_version"] = label
     payload["by_condition_macro_f1"] = {
-        c: metrics_payload(df.loc[df["condition"] == c, "label_one_year"].to_numpy(), pred[(df["condition"] == c).to_numpy()])["macro_f1"]
+        c: metrics_payload(df.loc[df["condition"] == c, label].to_numpy(), pred[(df["condition"] == c).to_numpy()])["macro_f1"]
         for c in CONDITIONS
     }
-    timing = (df["unknown_reason_one_year"] == "timing-unresolved").to_numpy()
-    recent = ((df["label_native"] == "FORMER") & (df["label_one_year"] == "CURRENT")).to_numpy()
+    timing = ((df["label_native"] == "FORMER") & (df[label] == "UNKNOWN")).to_numpy()
+    recent = ((df["label_native"] == "FORMER") & (df[label] == "CURRENT")).to_numpy()
     payload["timing_unresolved_recall"] = float((pred[timing] == "UNKNOWN").mean()) if timing.any() else None
     payload["recent_quitter_recall"] = f"{int((pred[recent] == 'CURRENT').sum())}/{int(recent.sum())}"
     return payload
@@ -133,30 +156,41 @@ def main(argv: list[str] | None = None) -> int:
     df = load(Path(args.wright_dir))
     df["split"] = assign_splits(df)
     df["crop_text"] = _crops(df)
+    df["label_one_year_v2"] = df.apply(one_year_label_v2, axis=1)
+    changed = df[df["label_one_year_v2"] != df["label_one_year"]]
     part = df[df["split"] == args.split].copy()
 
-    results: dict = {"resolver_version": RESOLVER_VERSION, "split": args.split, "resolver_source": args.source, "arms": {}}
+    results: dict = {
+        "resolver_version": RESOLVER_VERSION,
+        "split": args.split,
+        "resolver_source": args.source,
+        "label_v2_changes_all_splits": changed.groupby(["label_one_year", "label_one_year_v2"]).size().rename("n").reset_index().to_dict("records"),
+        "arms": {},
+    }
     sanity = part.apply(_oracle_quit, axis=1)
-    results["arms"]["Oracle-status+Oracle-quit"] = _score(part, sanity)
+    results["arms"]["Oracle-status+Oracle-quit|v1"] = _score(part, sanity)
     oracle_pred, traces = _resolve_all(part, part["label_native"], args.source)
-    results["arms"]["Oracle-status+R"] = _score(part, oracle_pred)
+    results["arms"]["Oracle-status+R|v1"] = _score(part, oracle_pred)
+    results["arms"]["Oracle-status+R|v2"] = _score(part, oracle_pred, "label_one_year_v2")
     results["resolver_diagnostics"] = _resolver_diagnostics(part, traces)
 
     if args.split == "dev":
         train = df[df["split"] == "train"]
         fill = lambda s: s.where(s.str.len() > 0, "__no_crop__")  # noqa: E731
         no_crop = (part["crop_text"].str.len() == 0).to_numpy()
-        a0 = _model("svm").fit(fill(train["crop_text"]), train["label_one_year"]).predict(fill(part["crop_text"])).astype(object)
-        a0[no_crop] = "UNKNOWN"
-        results["arms"]["A0"] = _score(part, a0)
+        for version, column in (("v1", "label_one_year"), ("v2", "label_one_year_v2")):
+            a0 = _model("svm").fit(fill(train["crop_text"]), train[column]).predict(fill(part["crop_text"])).astype(object)
+            a0[no_crop] = "UNKNOWN"
+            results["arms"][f"A0|{version}"] = _score(part, a0, column)
         native = _model("svm").fit(fill(train["crop_text"]), train["label_native"]).predict(fill(part["crop_text"])).astype(object)
         native[no_crop] = "UNKNOWN"
         hybrid, _ = _resolve_all(part, pd.Series(native, index=part.index), args.source)
-        results["arms"]["A-native+R"] = _score(part, hybrid)
+        results["arms"]["A-native+R|v1"] = _score(part, hybrid)
+        results["arms"]["A-native+R|v2"] = _score(part, hybrid, "label_one_year_v2")
 
     for name, payload in results["arms"].items():
         print(
-            f"{name:28s} macroF1={payload['macro_f1']:.3f} CUR_R={payload['current_recall']:.3f} "
+            f"{name:32s} macroF1={payload['macro_f1']:.3f} CUR_R={payload['current_recall']:.3f} "
             f"timingUNK_R={payload['timing_unresolved_recall']} recent={payload['recent_quitter_recall']} "
             f"by_cond={ {k: round(v, 3) for k, v in payload['by_condition_macro_f1'].items()} }"
         )
@@ -167,10 +201,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.show_errors:
         t = pd.DataFrame(traces).set_index("patient_id")
-        bad = part[(np.asarray(oracle_pred, dtype=object) != part["label_one_year"].to_numpy())]
+        bad = part[(np.asarray(oracle_pred, dtype=object) != part["label_one_year_v2"].to_numpy())]
+        print(f"v2 label changes (all splits): {results['label_v2_changes_all_splits']}")
         for _, row in bad.head(args.show_errors).iterrows():
             tr = t.loc[row["patient_id"]]
-            print(f"--- {row['patient_id']} truth={row['label_one_year']} pred={tr['label']} key={row['quit_date']}({row['quit_date_source']}) "
+            print(f"--- {row['patient_id']} truth={row['label_one_year_v2']} pred={tr['label']} key={row['quit_date']}({row['quit_date_source']}) "
                   f"note={row['note_date']} found={tr['matched_text']!r} [{tr['earliest']}..{tr['latest']}] rule={tr['rule']}")
 
     if args.out:
