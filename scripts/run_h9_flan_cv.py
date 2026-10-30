@@ -92,7 +92,7 @@ def _raw_scores(tok, model, texts, targets, labels):
     return scores
 
 
-def finetune(model_dir: str, texts: list[str], labels: list[str], *, epochs: int, seed: int, lr: float, batch: int = 16):
+def finetune(model_dir: str, texts: list[str], labels: list[str], *, epochs: int, seed: int, lr: float, batch: int = 16, optimizer: str = "adamw"):
     import torch
     from transformers import T5ForConditionalGeneration, T5Tokenizer, get_linear_schedule_with_warmup
 
@@ -105,7 +105,12 @@ def finetune(model_dir: str, texts: list[str], labels: list[str], *, epochs: int
     top = df["y"].value_counts().max()
     df = pd.concat([g.sample(top, replace=True, random_state=seed) for _, g in df.groupby("y")], ignore_index=True)
     order = np.random.default_rng(seed).permutation(len(df))
-    opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
+    if optimizer == "adafactor":
+        from transformers.optimization import Adafactor
+
+        opt = Adafactor(model.parameters(), lr=lr, relative_step=False, scale_parameter=False, warmup_init=False)
+    else:
+        opt = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     steps = epochs * int(np.ceil(len(df) / batch))
     sched = get_linear_schedule_with_warmup(opt, int(0.1 * steps), steps)
     for epoch in range(epochs):
@@ -139,6 +144,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--folds", default="0,1,2,3,4")
     parser.add_argument("--wright-dev", action="store_true", help="also score zero-shot on Wright dev (native)")
+    parser.add_argument("--optimizer", choices=("adamw", "adafactor"), default="adamw")
     args = parser.parse_args(argv)
 
     import torch
@@ -184,14 +190,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if "ft-S" in args.arms:
         for k in [int(f) for f in args.folds.split(",")]:
-            path = out / f"{args.tag}_ft-S_fold{k}.json"
+            path = out / f"{args.tag}_ft-S_fold{k}.json"  # tag carries the optimizer for H14 runs
             if path.exists():
                 continue
             tr, te = folds[k]
             a, b = sdoh.iloc[tr], sdoh.iloc[te]
             a = a[a["evid0"].str.len() > 0]
             started = time.perf_counter()
-            tok, model = finetune(args.model, a["evid0"].tolist(), a["label_native"].tolist(), epochs=args.epochs, seed=args.seed, lr=args.lr)
+            tok, model = finetune(args.model, a["evid0"].tolist(), a["label_native"].tolist(), epochs=args.epochs, seed=args.seed, lr=args.lr, optimizer=args.optimizer)
             pred = with_evidence(b["evid0"], lambda t: score_options(tok, model, t))
             m = metrics_payload(b["label_native"].to_numpy(), pred)
             path.write_text(json.dumps({"arm": "ft-S", "model": args.tag, "fold": k, "macro_f1": m["macro_f1"],
