@@ -1,0 +1,93 @@
+{
+ "sdoh_validation": {
+  "Flan-T5-base FT": {
+   "n": 109,
+   "macro_f1": 0.8463,
+   "per_class_f1": {
+    "CURRENT": 0.8,
+    "FORMER": 0.941,
+    "NEVER": 0.667,
+    "UNKNOWN": 0.978
+   },
+   "current_recall": 0.6666666666666666,
+   "current_precision": 1.0,
+   "macro_f1_smoking_bearing": 0.8292
+  },
+  "TF-IDF S": {
+   "n": 109,
+   "macro_f1": 0.8312,
+   "per_class_f1": {
+    "CURRENT": 0.8,
+    "FORMER": 0.875,
+    "NEVER": 0.667,
+    "UNKNOWN": 0.983
+   },
+   "current_recall": 0.6666666666666666,
+   "current_precision": 1.0,
+   "macro_f1_smoking_bearing": 0.8188
+  },
+  "paired_flan_minus_tfidf": {
+   "delta": 0.0151,
+   "ci95": [
+    -0.1099,
+    0.1383
+   ],
+   "p_le_0": 0.4202
+  },
+  "label_counts": {
+   "UNKNOWN": 88,
+   "CURRENT": 12,
+   "FORMER": 8,
+   "NEVER": 1
+  }
+ },
+ "sdoh_test": {
+  "Flan-T5-base FT": {
+   "n": 108,
+   "macro_f1": 0.8769,
+   "per_class_f1": {
+    "CURRENT": 1.0,
+    "FORMER": 0.857,
+    "NEVER": 0.667,
+    "UNKNOWN": 0.984
+   },
+   "current_recall": 1.0,
+   "current_precision": 1.0,
+   "macro_f1_smoking_bearing": 0.9058
+  },
+  "TF-IDF S": {
+   "n": 108,
+   "macro_f1": 0.6158,
+   "per_class_f1": {
+    "CURRENT": 0.818,
+    "FORMER": 0.667,
+    "NEVER": 0.0,
+    "UNKNOWN": 0.978
+   },
+   "current_recall": 0.9,
+   "current_precision": 0.75,
+   "macro_f1_smoking_bearing": 0.6156
+  },
+  "paired_flan_minus_tfidf": {
+   "delta": 0.261,
+   "ci95": [
+    0.0243,
+    0.4696
+   ],
+   "p_le_0": 0.0116
+  },
+  "label_counts": {
+   "UNKNOWN": 93,
+   "CURRENT": 10,
+   "FORMER": 3,
+   "NEVER": 2
+  }
+ },
+ "efficiency": {
+  "flan_sentences_per_s_4threads": 9.3,
+  "hourly_price_assumed": 0.17,
+  "flan_usd_per_million_sentences": 5.08,
+  "params": 247577856
+ },
+ "note": "Recovered from the run log: the process was OOM-killed in the later Wright stage after these SDOH stages had finished and printed."
+}
