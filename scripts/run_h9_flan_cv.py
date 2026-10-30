@@ -33,7 +33,7 @@ from run_h7_ood import add_evidence, load_sdoh  # noqa: E402
 from run_wright_smoke import assign_splits, load  # noqa: E402
 from src.metrics import metrics_payload  # noqa: E402
 
-from src.flan_status import ANSWERS, PROMPT, _raw_scores, finetune, score_options  # noqa: E402,F401  (moved verbatim)
+from src.flan_status import ANSWERS, PROMPT, _raw_scores, finetune, load_tokenizer, score_options  # noqa: E402,F401  (moved verbatim)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -73,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
         return pred
 
     if "zeroshot" in args.arms:
-        tok = T5Tokenizer.from_pretrained(args.model, legacy=False)
+        tok = load_tokenizer(args.model)
         model = T5ForConditionalGeneration.from_pretrained(args.model).eval()
         started = time.perf_counter()
         zs = with_evidence(sdoh["evid0"], lambda t: score_options(tok, model, t, calibrate=True))

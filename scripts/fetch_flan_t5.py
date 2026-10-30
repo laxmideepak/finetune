@@ -127,9 +127,33 @@ def load_streaming(model, params, n_enc: int, n_dec: int) -> list[str]:
     return [k for k in state if k not in filled and not k.endswith("embed_tokens.weight")]
 
 
+def find_checkpoint(model_prefix: str) -> str:
+    """Latest checkpoint_* folder under a t5-data T5X model prefix."""
+    query = {"prefix": model_prefix.rstrip("/") + "/", "delimiter": "/", "fields": "prefixes"}
+    prefixes = json.loads(_get(LISTING + "?" + urllib.parse.urlencode(query))).get("prefixes", [])
+    ckpts = sorted((p for p in prefixes if "/checkpoint_" in p), key=lambda p: int(p.rstrip("/").rsplit("_", 1)[1]))
+    if not ckpts:
+        raise SystemExit(f"no checkpoint_* under {model_prefix}")
+    return ckpts[-1].rstrip("/")
+
+
+def infer_dims(cache: Path) -> dict:
+    """Read T5 v1.1 dimensions from the zarr array shapes."""
+    import zarr
+
+    shape = lambda name: zarr.open(str(cache / f"target.{name}"), mode="r").shape  # noqa: E731
+    n_enc = len([p for p in cache.iterdir() if p.name.startswith("target.encoder.layers_") and p.name.endswith(".attention.query.kernel")])
+    n_dec = len([p for p in cache.iterdir() if p.name.startswith("target.decoder.layers_") and p.name.endswith(".self_attention.query.kernel")])
+    d_model, inner = shape("encoder.layers_0.attention.query.kernel")
+    heads = shape("encoder.relpos_bias.rel_embedding")[0]
+    return dict(d_model=d_model, d_ff=shape("encoder.layers_0.mlp.wi_0.kernel")[1], num_layers=n_enc,
+                num_decoder_layers=n_dec, num_heads=heads, d_kv=inner // heads)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--size", choices=sorted(CHECKPOINTS), default="small")
+    parser.add_argument("--model", default=None, help="any T5 v1.1-layout model under gs://t5-data/pretrained_models/t5x/ (e.g. t5_1_1_lm100k_base, byt5_small); overrides --size")
     parser.add_argument("--out", required=True)
     parser.add_argument("--cache", default=None)
     args = parser.parse_args(argv)
@@ -137,10 +161,15 @@ def main(argv: list[str] | None = None) -> int:
     import torch
     from transformers import T5Config, T5ForConditionalGeneration, T5Tokenizer
 
-    prefix, dims = CHECKPOINTS[args.size]
+    if args.model:
+        prefix, dims = find_checkpoint(f"pretrained_models/t5x/{args.model}"), None
+    else:
+        prefix, dims = CHECKPOINTS[args.size]
     out = Path(args.out)
     cache = Path(args.cache) if args.cache else out.with_name(out.name + "-t5x")
     params = read_params(download(prefix, cache))
+    dims = dims or infer_dims(cache)
+    print("dims", dims)
     import zarr
 
     vocab = zarr.open(str(cache / "target.token_embedder.embedding"), mode="r").shape[0]
@@ -151,8 +180,13 @@ def main(argv: list[str] | None = None) -> int:
     missing = load_streaming(model, params, dims["num_layers"], dims["num_decoder_layers"])
     print(f"missing={missing}")
     out.mkdir(parents=True, exist_ok=True)
-    (out / "spiece.model").write_bytes(_get(f"{BUCKET}/{VOCAB}"))
-    tokenizer = T5Tokenizer(str(out / "spiece.model"), extra_ids=100, legacy=False)
+    if args.model and args.model.startswith("byt5"):
+        from transformers import ByT5Tokenizer
+
+        tokenizer = ByT5Tokenizer()
+    else:
+        (out / "spiece.model").write_bytes(_get(f"{BUCKET}/{VOCAB}"))
+        tokenizer = T5Tokenizer(str(out / "spiece.model"), extra_ids=100, legacy=False)
     tokenizer.save_pretrained(str(out))
     model.save_pretrained(str(out))
     model.eval()

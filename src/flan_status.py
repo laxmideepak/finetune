@@ -13,6 +13,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+def load_tokenizer(model_dir: str):
+    """SentencePiece T5 tokenizer when the folder has one (Flan/T5 v1.1; unchanged from H9),
+    otherwise the folder's own tokenizer (e.g. ByT5's byte tokenizer)."""
+    if (Path(model_dir) / "spiece.model").exists():
+        from transformers import T5Tokenizer
+
+        return T5Tokenizer.from_pretrained(model_dir, legacy=False)
+    from transformers import AutoTokenizer
+
+    return AutoTokenizer.from_pretrained(model_dir)
+
+
 ANSWERS = {"CURRENT": "current smoker", "FORMER": "former smoker", "NEVER": "never smoked", "UNKNOWN": "unknown"}
 # Flan's own multiple-choice format (fixed on 8 hand-written policy cases, not on any eval data).
 PROMPT = (
@@ -77,7 +89,7 @@ def finetune(model_dir: str, texts: list[str], labels: list[str], *, epochs: int
     from transformers import T5ForConditionalGeneration, T5Tokenizer, get_linear_schedule_with_warmup
 
     torch.manual_seed(seed)
-    tok = T5Tokenizer.from_pretrained(model_dir, legacy=False)
+    tok = load_tokenizer(model_dir)
     model = T5ForConditionalGeneration.from_pretrained(model_dir)
     model.train()
     # Oversample minority classes to the size of the largest one (labels are strings here).
@@ -125,7 +137,7 @@ class FlanStatusClassifier:
 
             if self.threads:
                 torch.set_num_threads(self.threads)
-            self._tok = T5Tokenizer.from_pretrained(self.model_dir, legacy=False)
+            self._tok = load_tokenizer(self.model_dir)
             self._model = T5ForConditionalGeneration.from_pretrained(self.model_dir).eval()
         return self._tok, self._model
 
