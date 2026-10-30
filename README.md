@@ -8,10 +8,11 @@
 
 <br/>
 
-![Status](https://img.shields.io/badge/status-E--wave--1%20done-2ea44f?style=for-the-badge)
+![Status](https://img.shields.io/badge/status-model%20recommended-2ea44f?style=for-the-badge)
+![Best](https://img.shields.io/badge/best-Flan--T5--base%20fine--tuned-0e6f68?style=for-the-badge)
 ![Design](https://img.shields.io/badge/design%20contract-v0.9.1-1f6feb?style=for-the-badge)
 ![Retrieval](https://img.shields.io/badge/retrieval-v2-8250df?style=for-the-badge)
-![Tests](https://img.shields.io/badge/tests-57%20passing-2ea44f?style=for-the-badge)
+![Tests](https://img.shields.io/badge/tests-77%20passing-2ea44f?style=for-the-badge)
 
 ![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/torch-2.8.0-EE4C2C?logo=pytorch&logoColor=white)
@@ -24,7 +25,7 @@
 [**The problem**](#-the-problem) ·
 [**Pipeline**](#-pipeline-at-a-glance) ·
 [**Model arms**](#-model-arms) ·
-[**Latest results**](#-latest-results--e-wave-1) ·
+[**Recommended model**](#-recommended-model-2026-10-30) ·
 [**Evidence**](#-what-the-evidence-says) ·
 [**Quickstart**](#-quickstart) ·
 [**Repo map**](#-repository-map) ·
@@ -102,50 +103,77 @@ Stage contracts, boundary tests B1–B11 and risks R1–R7 → **[`docs/design/p
 
 ---
 
-## 📊 Latest results — E-wave-1
+## 🏆 Recommended model (2026-10-30)
 
-<sub>2026-10-29 · Wright synthetic benchmark (3,000 notes, CC-BY-4.0) · patient-disjoint 60/20/20 · dev split only, test locked · <b>comparability set, never gold</b></sub>
+> [!TIP]
+> **Fine-tuned Flan-T5-base (250M) on evidence sentences**, behind a TF-IDF confidence cascade, with a rule-based quit-date reader for the one-year rule. Trains in minutes on a CPU; no GPU used.
 
-<table>
-<tr>
-<td width="50%" valign="top">
+```mermaid
+flowchart LR
+    N["Note + note date + age"] --> R["Find smoking sentences<br/>retrieval-v2"]
+    R -->|none| U["UNKNOWN<br/>(retrieval-negative)"]
+    R --> T["TF-IDF status<br/>(cheap, confident 60%)"]
+    T -->|"low margin (40%)"| F["Flan-T5-base fine-tuned<br/>(hard 40%)"]
+    T --> Q
+    F --> Q["Quit-date reader<br/>+ one-year rule"]
+    Q --> L["CURRENT · FORMER · NEVER · UNKNOWN<br/>+ evidence + reason"]
+```
 
-#### 🔎 E0 — retrieval
-| | v1 | **v2** |
-|---|:-:|:-:|
-| Known-status notes with **no** crop | 27 / 2,750 | **3 / 2,750** |
-| Miss rate | 0.98% | **0.11%** |
-| Crop words p50 / p95 | 148 / 354 | 148 / 353 |
-| Truncated crops | 0 | 0 |
+#### Human-written text (SDOH-NLI, openly licensed MTSamples sentences)
 
-v2 adds the shorthand v1 missed: `Tob:` · `+tob` · `nonsmoker` · `pkyr` · `pk-yr` · `pack-yrs`.
+| Model | 5-fold CV (pooled) | Locked test (opened once) | NEVER F1 (CV) |
+|---|:-:|:-:|:-:|
+| 🥇 **Flan-T5-base, fine-tuned** | **0.868** | **0.877** | **0.68** |
+| Cascade: TF-IDF → Flan on 40% | 0.865 | — | 0.70 |
+| Flan-T5-small, fine-tuned | 0.795 | — | 0.49 |
+| TF-IDF word+char SVM | 0.779 | 0.616 | 0.49 |
+| Flan-T5-large, zero-shot + policy guard | 0.750 | — | 0.48 |
+| SciBERT, generic fine-tune | 0.682 | — | 0.10 |
+| Trained on synthetic notes only | 0.599 | — | 0.24 |
 
-</td>
-<td width="50%" valign="top">
+Flan-T5-base vs TF-IDF: **+0.090** on CV (95% CI +0.030…+0.151, wins 5/5 folds) and **+0.261** on the locked test (CI +0.024…+0.470); test CURRENT recall/precision **1.00 / 1.00**.
 
-#### 🧪 E3 — TF-IDF floor (macro-F1)
-| Labels | Crops | Full note |
-|---|:-:|:-:|
-| Wright native | **0.979** | 0.952 |
-| Our one-year rule | **0.888** | 0.848 |
+#### Synthetic notes with the one-year rule (Wright, 600 dev notes)
 
-Crops beat full notes in every setting (+2.7 to +4.2 points).
+| Pipeline | One-year macro-F1 | Status accuracy | CURRENT R / P |
+|---|:-:|:-:|:-:|
+| Flan-T5-base + quit-date reader | 0.972 | 599 / 600 | 1.00 / 1.00 |
+| TF-IDF + quit-date reader | 0.973 | 600 / 600 | 1.00 / 1.00 |
+| TF-IDF learning the one-year labels directly | 0.888 | — | 0.92 / 1.00 |
 
-</td>
-</tr>
-</table>
+#### Cost on CPU (assumed $0.17/h for 4 vCPU)
 
-> [!WARNING]
-> **Under the one-year rule the errors are all date arithmetic.** The floor model called **6 of 6** recent quitters `FORMER` (should be `CURRENT`), and **30 of 36** "quit date unclear" notes `FORMER` (should be `UNKNOWN`). ➜ **The note's reference date must be part of the model input.**
+| Setup | ≈ $ per million sentences |
+|---|:-:|
+| TF-IDF only | 0.04 |
+| **Cascade (Flan on 40%)** | **2.07** |
+| Flan-T5-base on everything | 5.08 |
+| Published cloud-LLM full-note costs | 120 – 6,610 per million notes |
 
-| | Finding | Consequence |
+> [!CAUTION]
+> SDOH-NLI's test split has only 15 smoking-labelled premises, and its labels differ from our policy at the edges (cigars, third parties). Wright is synthetic. **No clinical gold data has been used yet** — i2b2-2006 awaits its DUA.
+
+<details>
+<summary><b>How we got here — experiment trail</b> (every plan committed before its run)</summary>
+
+<br/>
+
+| Exp | Question | Verdict |
 |:-:|---|---|
-| 1 | Wright native labels are easy (TF-IDF 0.98) | Cannot rank neural arms — use as a pipeline check only |
-| 2 | 5% of crops exceed 512 *model* tokens after re-tokenizing | Retrieval tokenizer must equal the model tokenizer |
-| 3 | CPU, base-size encoder: **2.2 snippets/s** on 4 vCPU (≈ **$19–25 / M**) | CPU fp32 is not competitive; GPU numbers needed |
-| 4 | TF-IDF: ~350 notes/s on one core (≈ $0.15 / M) | The cost floor every neural arm must justify |
+| E-wave-1 | Does retrieval find the evidence? | Lexicon v2: missed notes 27 → 3 of 2,750 |
+| H5 | Can a model learn the one-year rule? | No — a quit-date reader + note date does it (0.888 → 0.947) |
+| H6 | Whole section or evidence sentence? | Evidence sentence: 600/600 status on synthetic (0.973) |
+| H7 | Does synthetic training transfer to human text? | No: 0.60 vs 0.79 in-domain |
+| H8 | SciBERT, generic recipe | Refuted (0.682) |
+| H9 | Flan-T5 zero-shot / fine-tuned | Fine-tuned base wins (0.868) |
+| H10 | Zero-shot + policy guard | Refuted (0.750) |
+| H11 | 3-model vote | Refuted (0.840 < best single) |
+| H12 | Locked-test confirmation | Confirmed (0.877 vs 0.616; Wright 0.972) |
+| H13 | Cascade for cost | 97% of the gain at ~40% of the cost (exploratory) |
 
-Full write-up → **[`docs/results/e-wave-1-results-2026-10-29.md`](docs/results/e-wave-1-results-2026-10-29.md)**
+Write-ups: [`experiments/*/analysis.md`](experiments) · leaderboard: [`experiments/sdoh-cv-leaderboard.json`](experiments/sdoh-cv-leaderboard.json) · E-wave-1: [`docs/results/e-wave-1-results-2026-10-29.md`](docs/results/e-wave-1-results-2026-10-29.md)
+
+</details>
 
 ---
 
@@ -219,7 +247,7 @@ pip install -r requirements/dev.txt          # encoder stack + pytest
 
 ```bash
 python scripts/check_env.py                  # verify pins, devices, label policy, data contract
-python -m pytest -q tests                    # 57 unit tests
+python -m pytest -q tests                    # 77 unit tests
 python scripts/smoke_train.py                # offline tiny-model train → save → reload → predict
 python src/extract_windows.py --demo         # see the crop extractor on a built-in note
 ```
@@ -263,6 +291,10 @@ finetune/
 │   ├── label_policy.py           # ★ single source of truth for labels & the one-year rule
 │   ├── data_contract.py          # shared dataset contract for every entry point
 │   ├── extract_windows.py        # Stage 3 crop extractor (retrieval-v2)
+│   ├── evidence.py               # evidence-sentence view of a crop (H6)
+│   ├── quit_resolver.py          # quit-date reader + one-year rule (H5)
+│   ├── status_rules.py           # keyword baseline + lifetime-never cues (policy guard)
+│   ├── pipeline.py               # ★ end-to-end: note → label + reason + evidence
 │   ├── train_encoder.py          # arms C / D / E
 │   ├── train_generative.py       # arm G (Qwen3 LoRA)
 │   ├── evaluate_generative.py
@@ -275,19 +307,25 @@ finetune/
 │   ├── check_env.py              # environment readiness check
 │   ├── smoke_train.py            # offline end-to-end smoke
 │   ├── run_wright_smoke.py       # E0 + E3 on the Wright benchmark
-│   └── build_shape_model.py      # E4 offline speed model
+│   ├── build_shape_model.py      # E4 offline speed model
+│   ├── run_h5…h13_*.py           # one runner per experiment (H5–H13)
+│   ├── fetch_flan_t5.py          # Flan-T5 from Google's public GCS (no HF Hub needed)
+│   ├── compare_sdoh_cv.py        # pooled leaderboard + paired bootstrap
+│   └── pipeline_cli.py           # train / predict / bench the pipeline
 │
-├── ✅ tests/                      # 57 unit tests + synthetic fixture
+├── 🧪 experiments/               # one folder per hypothesis: protocol.md (locked first) · analysis.md · results/
+│
+├── ✅ tests/                      # 77 unit tests + synthetic fixture
 │
 ├── 📚 docs/
 │   ├── MASTER_CONTEXT.md         # ★ start here: user, scope, phases, hypotheses
 │   ├── design/                   # pipeline-design.md (contract v0.9.1) · pipeline-diagram.md
-│   ├── results/                  # experiment write-ups (E-wave-1)
+│   ├── results/                  # E-wave-1 write-up
 │   ├── literature/               # survey.md — verified literature + pricing
 │   ├── external-reports/         # two external expert reports (verbatim)
 │   └── tracking/                 # findings.md · research-log.md · research-state.yaml
 │
-└── 🔒 data/ · experiments/ · paper/ · to_human/   # git-ignored workspaces (never committed)
+└── 🔒 data/ · paper/ · to_human/   # git-ignored workspaces (never committed)
 ```
 
 **Read order for newcomers:** [`MASTER_CONTEXT`](docs/MASTER_CONTEXT.md) → [`pipeline-design`](docs/design/pipeline-design.md) → [`pipeline-diagram`](docs/design/pipeline-diagram.md) → [`E-wave-1 results`](docs/results/e-wave-1-results-2026-10-29.md) → [`findings`](docs/tracking/findings.md) → [`research-log`](docs/tracking/research-log.md)
@@ -299,17 +337,19 @@ finetune/
 | Phase | Content | Status |
 |:-:|---|:-:|
 | 1 | Research: datasets, models, methods, architecture, costs | ✅ design v0.9.1 |
-| E | **Zero-DUA smokes E0–E4** on the Wright benchmark | 🟡 E0 · E3 done · E1 · E2 · E4 need model weights + GPU |
+| E | **Zero-DUA smokes E0–E4** on the Wright benchmark | ✅ done on CPU |
+| H | **H5–H13 on Wright + SDOH-NLI** (no DUA needed) | ✅ Flan-T5-base fine-tuned recommended |
 | 2 | DUA execution (i2b2 + SHAC); dataset kit + labeling policy | ⏳ user-side signing |
 | 3 | Fine-tune arms A–G on rented GPU ($50–200); comparison report | ⏳ after Phase 2 |
 | 4 | Winner deployment recipe + INT8 slot + real-environment validation | ⏳ |
 | 5 | Real-EHR adaptation (self-training / active learning) — PHI never leaves | ⏳ |
 
 **Next moves**
-- [ ] Re-run E0 with the real ModernBERT tokenizer as the retrieval tokenizer
-- [ ] Put the note's reference date into the visible model input
-- [ ] E2: arm C toy fine-tune on Wright (one-year + native labels) on GPU
-- [ ] E4: throughput on T4 / L4 / A10G with the real model
+- [x] Quit-date reader + note date for the one-year rule (H5)
+- [x] Pretrained models without the HF Hub: SciBERT (scispaCy/S3), Flan-T5 (GCS)
+- [ ] Fine-tune Flan-T5-large (780M) — does bigger still help?
+- [ ] SciBERT with a small-data recipe (H8b, locked, deferred)
+- [ ] Validate on i2b2-2006 once the DUA is signed
 
 ---
 
