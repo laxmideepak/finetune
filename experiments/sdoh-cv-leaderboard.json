@@ -26,6 +26,32 @@
   }
  },
  {
+  "arm": "Flan-T5-base-ada fine-tuned",
+  "complete": true,
+  "pooled_macro_f1": 0.854,
+  "per_class_f1": {
+   "CURRENT": 0.86,
+   "FORMER": 0.914,
+   "NEVER": 0.667,
+   "UNKNOWN": 0.976
+  },
+  "fold_macro_f1": [
+   0.818,
+   0.86,
+   0.891,
+   0.867,
+   0.829
+  ],
+  "delta_vs_tfidf": {
+   "mean": 0.0757,
+   "ci95": [
+    0.0229,
+    0.1329
+   ],
+   "p_le_0": 0.0036
+  }
+ },
+ {
   "arm": "H11 vote (TF-IDF, Flan-base FT, Flan-large ZS+guard)",
   "complete": true,
   "pooled_macro_f1": 0.8396,
@@ -49,6 +75,32 @@
     0.1124
    ],
    "p_le_0": 0.0044
+  }
+ },
+ {
+  "arm": "Flan-T5-large-ada fine-tuned",
+  "complete": true,
+  "pooled_macro_f1": 0.8134,
+  "per_class_f1": {
+   "CURRENT": 0.867,
+   "FORMER": 0.959,
+   "NEVER": 0.473,
+   "UNKNOWN": 0.955
+  },
+  "fold_macro_f1": [
+   0.693,
+   0.911,
+   0.831,
+   0.881,
+   0.877
+  ],
+  "delta_vs_tfidf": {
+   "mean": 0.0357,
+   "ci95": [
+    -0.0325,
+    0.1033
+   ],
+   "p_le_0": 0.1512
   }
  },
  {
