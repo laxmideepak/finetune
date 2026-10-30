@@ -204,6 +204,10 @@ def main(argv: list[str] | None = None) -> int:
                                         "per_class_f1": {c: v["f1"] for c, v in m["per_class"].items()}, "pred": pred.tolist(),
                                         "seconds": round(time.perf_counter() - started, 1)}, indent=1, default=str))
             print(f"{args.tag} ft-S fold {k} macroF1={m['macro_f1']:.3f} NEVER={m['per_class']['NEVER']['f1']:.3f} {time.perf_counter() - started:.0f}s", flush=True)
+            del tok, model  # free this fold's model before the next fold trains (large: 2 x 3 GB otherwise)
+            import gc
+
+            gc.collect()
     return 0
 
 
