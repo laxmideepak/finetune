@@ -1,0 +1,50 @@
+{
+  "policy_version": "smoking-status-v1",
+  "native_counts": {
+    "FORMER": 1171,
+    "CURRENT": 876,
+    "NEVER": 703,
+    "UNKNOWN": 250
+  },
+  "one_year_counts": {
+    "FORMER": 958,
+    "CURRENT": 900,
+    "NEVER": 703,
+    "UNKNOWN": 439
+  },
+  "native_to_one_year": {
+    "CURRENT": {
+      "CURRENT": 876,
+      "FORMER": 24,
+      "NEVER": 0,
+      "UNKNOWN": 0
+    },
+    "FORMER": {
+      "CURRENT": 0,
+      "FORMER": 958,
+      "NEVER": 0,
+      "UNKNOWN": 0
+    },
+    "NEVER": {
+      "CURRENT": 0,
+      "FORMER": 0,
+      "NEVER": 703,
+      "UNKNOWN": 0
+    },
+    "UNKNOWN": {
+      "CURRENT": 0,
+      "FORMER": 189,
+      "NEVER": 0,
+      "UNKNOWN": 250
+    }
+  },
+  "one_year_unknown_reasons": {
+    "no-mention": 250,
+    "timing-unresolved": 189
+  },
+  "split_counts": {
+    "train": 1800,
+    "dev": 600,
+    "test": 600
+  }
+}

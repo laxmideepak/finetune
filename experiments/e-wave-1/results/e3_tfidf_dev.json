@@ -1,0 +1,666 @@
+{
+  "native|crops|lr": {
+    "n": 600,
+    "n_invalid": 0,
+    "invalid_rate": 0.0,
+    "coverage": 1.0,
+    "macro_f1": 0.970456296321573,
+    "macro_f1_valid_only": 0.970456296321573,
+    "accuracy_all": 0.9683333333333334,
+    "current_recall": 0.9314285714285714,
+    "current_precision": 0.9939024390243902,
+    "per_class": {
+      "CURRENT": {
+        "precision": 0.9939024390243902,
+        "recall": 0.9314285714285714,
+        "f1": 0.9616519174041298,
+        "support": 175
+      },
+      "FORMER": {
+        "precision": 0.9506172839506173,
+        "recall": 0.9871794871794872,
+        "f1": 0.9685534591194969,
+        "support": 234
+      },
+      "NEVER": {
+        "precision": 0.9586206896551724,
+        "recall": 0.9858156028368794,
+        "f1": 0.972027972027972,
+        "support": 141
+      },
+      "UNKNOWN": {
+        "precision": 1.0,
+        "recall": 0.96,
+        "f1": 0.9795918367346939,
+        "support": 50
+      }
+    },
+    "confusion_matrix_rows_true_cols_pred": [
+      [
+        163,
+        10,
+        2,
+        0,
+        0
+      ],
+      [
+        1,
+        231,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        139,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        48,
+        0
+      ]
+    ],
+    "prediction_columns": [
+      "CURRENT",
+      "FORMER",
+      "NEVER",
+      "UNKNOWN",
+      "__INVALID__"
+    ],
+    "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+    "by_condition_macro_f1": {
+      "basic": 0.9226626860439419,
+      "messy": 0.9765765765765766,
+      "complex": 1.0
+    },
+    "fit_seconds": 15.58,
+    "dev_predict_seconds": 1.781,
+    "dev_notes_per_second": 336.8
+  },
+  "native|crops|svm": {
+    "n": 600,
+    "n_invalid": 0,
+    "invalid_rate": 0.0,
+    "coverage": 1.0,
+    "macro_f1": 0.9785309891191685,
+    "macro_f1_valid_only": 0.9785309891191685,
+    "accuracy_all": 0.9783333333333334,
+    "current_recall": 0.9542857142857143,
+    "current_precision": 1.0,
+    "per_class": {
+      "CURRENT": {
+        "precision": 1.0,
+        "recall": 0.9542857142857143,
+        "f1": 0.9766081871345029,
+        "support": 175
+      },
+      "FORMER": {
+        "precision": 0.9666666666666667,
+        "recall": 0.9914529914529915,
+        "f1": 0.9789029535864979,
+        "support": 234
+      },
+      "NEVER": {
+        "precision": 0.9655172413793104,
+        "recall": 0.9929078014184397,
+        "f1": 0.9790209790209791,
+        "support": 141
+      },
+      "UNKNOWN": {
+        "precision": 1.0,
+        "recall": 0.96,
+        "f1": 0.9795918367346939,
+        "support": 50
+      }
+    },
+    "confusion_matrix_rows_true_cols_pred": [
+      [
+        167,
+        7,
+        1,
+        0,
+        0
+      ],
+      [
+        0,
+        232,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        140,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        48,
+        0
+      ]
+    ],
+    "prediction_columns": [
+      "CURRENT",
+      "FORMER",
+      "NEVER",
+      "UNKNOWN",
+      "__INVALID__"
+    ],
+    "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+    "by_condition_macro_f1": {
+      "basic": 0.9511421066299115,
+      "messy": 0.9765765765765766,
+      "complex": 1.0
+    },
+    "fit_seconds": 9.81,
+    "dev_predict_seconds": 1.48,
+    "dev_notes_per_second": 405.3
+  },
+  "native|full-note|lr": {
+    "n": 600,
+    "n_invalid": 0,
+    "invalid_rate": 0.0,
+    "coverage": 1.0,
+    "macro_f1": 0.9284152798874966,
+    "macro_f1_valid_only": 0.9284152798874966,
+    "accuracy_all": 0.9466666666666667,
+    "current_recall": 0.92,
+    "current_precision": 0.9938271604938271,
+    "per_class": {
+      "CURRENT": {
+        "precision": 0.9938271604938271,
+        "recall": 0.92,
+        "f1": 0.9554896142433235,
+        "support": 175
+      },
+      "FORMER": {
+        "precision": 0.95,
+        "recall": 0.9743589743589743,
+        "f1": 0.9620253164556962,
+        "support": 234
+      },
+      "NEVER": {
+        "precision": 0.9078947368421053,
+        "recall": 0.9787234042553191,
+        "f1": 0.9419795221843004,
+        "support": 141
+      },
+      "UNKNOWN": {
+        "precision": 0.8913043478260869,
+        "recall": 0.82,
+        "f1": 0.8541666666666666,
+        "support": 50
+      }
+    },
+    "confusion_matrix_rows_true_cols_pred": [
+      [
+        161,
+        10,
+        3,
+        1,
+        0
+      ],
+      [
+        1,
+        228,
+        4,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        138,
+        3,
+        0
+      ],
+      [
+        0,
+        2,
+        7,
+        41,
+        0
+      ]
+    ],
+    "prediction_columns": [
+      "CURRENT",
+      "FORMER",
+      "NEVER",
+      "UNKNOWN",
+      "__INVALID__"
+    ],
+    "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+    "by_condition_macro_f1": {
+      "basic": 0.8212066527283919,
+      "messy": 0.9765765765765766,
+      "complex": 0.9882928905917412
+    },
+    "fit_seconds": 19.01,
+    "dev_predict_seconds": 2.736,
+    "dev_notes_per_second": 219.3
+  },
+  "native|full-note|svm": {
+    "n": 600,
+    "n_invalid": 0,
+    "invalid_rate": 0.0,
+    "coverage": 1.0,
+    "macro_f1": 0.9520899838038432,
+    "macro_f1_valid_only": 0.9520899838038432,
+    "accuracy_all": 0.9616666666666667,
+    "current_recall": 0.9371428571428572,
+    "current_precision": 1.0,
+    "per_class": {
+      "CURRENT": {
+        "precision": 1.0,
+        "recall": 0.9371428571428572,
+        "f1": 0.967551622418879,
+        "support": 175
+      },
+      "FORMER": {
+        "precision": 0.9545454545454546,
+        "recall": 0.9871794871794872,
+        "f1": 0.9705882352941176,
+        "support": 234
+      },
+      "NEVER": {
+        "precision": 0.9266666666666666,
+        "recall": 0.9858156028368794,
+        "f1": 0.9553264604810997,
+        "support": 141
+      },
+      "UNKNOWN": {
+        "precision": 0.9772727272727273,
+        "recall": 0.86,
+        "f1": 0.9148936170212766,
+        "support": 50
+      }
+    },
+    "confusion_matrix_rows_true_cols_pred": [
+      [
+        164,
+        9,
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        231,
+        3,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        139,
+        1,
+        0
+      ],
+      [
+        0,
+        1,
+        6,
+        43,
+        0
+      ]
+    ],
+    "prediction_columns": [
+      "CURRENT",
+      "FORMER",
+      "NEVER",
+      "UNKNOWN",
+      "__INVALID__"
+    ],
+    "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+    "by_condition_macro_f1": {
+      "basic": 0.8670871066193024,
+      "messy": 0.9885108263367212,
+      "complex": 1.0
+    },
+    "fit_seconds": 12.7,
+    "dev_predict_seconds": 2.879,
+    "dev_notes_per_second": 208.4
+  },
+  "one_year|crops|lr": {
+    "n": 600,
+    "n_invalid": 0,
+    "invalid_rate": 0.0,
+    "coverage": 1.0,
+    "macro_f1": 0.8801016466891826,
+    "macro_f1_valid_only": 0.8801016466891826,
+    "accuracy_all": 0.9033333333333333,
+    "current_recall": 0.9171270718232044,
+    "current_precision": 0.9940119760479041,
+    "per_class": {
+      "CURRENT": {
+        "precision": 0.9940119760479041,
+        "recall": 0.9171270718232044,
+        "f1": 0.9540229885057471,
+        "support": 181
+      },
+      "FORMER": {
+        "precision": 0.8051948051948052,
+        "recall": 0.96875,
+        "f1": 0.8794326241134752,
+        "support": 192
+      },
+      "NEVER": {
+        "precision": 0.952054794520548,
+        "recall": 0.9858156028368794,
+        "f1": 0.9686411149825784,
+        "support": 141
+      },
+      "UNKNOWN": {
+        "precision": 0.9107142857142857,
+        "recall": 0.5930232558139535,
+        "f1": 0.7183098591549296,
+        "support": 86
+      }
+    },
+    "confusion_matrix_rows_true_cols_pred": [
+      [
+        166,
+        11,
+        2,
+        2,
+        0
+      ],
+      [
+        1,
+        186,
+        2,
+        3,
+        0
+      ],
+      [
+        0,
+        2,
+        139,
+        0,
+        0
+      ],
+      [
+        0,
+        32,
+        3,
+        51,
+        0
+      ]
+    ],
+    "prediction_columns": [
+      "CURRENT",
+      "FORMER",
+      "NEVER",
+      "UNKNOWN",
+      "__INVALID__"
+    ],
+    "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+    "by_condition_macro_f1": {
+      "basic": 0.8173976608187135,
+      "messy": 0.9008420316123862,
+      "complex": 0.9138569078947368
+    },
+    "fit_seconds": 15.02,
+    "dev_predict_seconds": 1.692,
+    "dev_notes_per_second": 354.5
+  },
+  "one_year|crops|svm": {
+    "n": 600,
+    "n_invalid": 0,
+    "invalid_rate": 0.0,
+    "coverage": 1.0,
+    "macro_f1": 0.8877386814022455,
+    "macro_f1_valid_only": 0.8877386814022455,
+    "accuracy_all": 0.9116666666666666,
+    "current_recall": 0.9226519337016574,
+    "current_precision": 0.9940476190476191,
+    "per_class": {
+      "CURRENT": {
+        "precision": 0.9940476190476191,
+        "recall": 0.9226519337016574,
+        "f1": 0.9570200573065902,
+        "support": 181
+      },
+      "FORMER": {
+        "precision": 0.8146551724137931,
+        "recall": 0.984375,
+        "f1": 0.8915094339622641,
+        "support": 192
+      },
+      "NEVER": {
+        "precision": 0.9655172413793104,
+        "recall": 0.9929078014184397,
+        "f1": 0.9790209790209791,
+        "support": 141
+      },
+      "UNKNOWN": {
+        "precision": 0.9272727272727272,
+        "recall": 0.5930232558139535,
+        "f1": 0.723404255319149,
+        "support": 86
+      }
+    },
+    "confusion_matrix_rows_true_cols_pred": [
+      [
+        167,
+        11,
+        1,
+        2,
+        0
+      ],
+      [
+        0,
+        189,
+        1,
+        2,
+        0
+      ],
+      [
+        0,
+        1,
+        140,
+        0,
+        0
+      ],
+      [
+        1,
+        31,
+        3,
+        51,
+        0
+      ]
+    ],
+    "prediction_columns": [
+      "CURRENT",
+      "FORMER",
+      "NEVER",
+      "UNKNOWN",
+      "__INVALID__"
+    ],
+    "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+    "by_condition_macro_f1": {
+      "basic": 0.8328590489668867,
+      "messy": 0.9121869513477168,
+      "complex": 0.9138569078947368
+    },
+    "fit_seconds": 11.14,
+    "dev_predict_seconds": 1.721,
+    "dev_notes_per_second": 348.5
+  },
+  "one_year|full-note|lr": {
+    "n": 600,
+    "n_invalid": 0,
+    "invalid_rate": 0.0,
+    "coverage": 1.0,
+    "macro_f1": 0.8472886886133988,
+    "macro_f1_valid_only": 0.8472886886133988,
+    "accuracy_all": 0.8783333333333333,
+    "current_recall": 0.8895027624309392,
+    "current_precision": 1.0,
+    "per_class": {
+      "CURRENT": {
+        "precision": 1.0,
+        "recall": 0.8895027624309392,
+        "f1": 0.9415204678362573,
+        "support": 181
+      },
+      "FORMER": {
+        "precision": 0.793859649122807,
+        "recall": 0.9427083333333334,
+        "f1": 0.861904761904762,
+        "support": 192
+      },
+      "NEVER": {
+        "precision": 0.9025974025974026,
+        "recall": 0.9858156028368794,
+        "f1": 0.9423728813559322,
+        "support": 141
+      },
+      "UNKNOWN": {
+        "precision": 0.8070175438596491,
+        "recall": 0.5348837209302325,
+        "f1": 0.6433566433566433,
+        "support": 86
+      }
+    },
+    "confusion_matrix_rows_true_cols_pred": [
+      [
+        161,
+        15,
+        2,
+        3,
+        0
+      ],
+      [
+        0,
+        181,
+        5,
+        6,
+        0
+      ],
+      [
+        0,
+        0,
+        139,
+        2,
+        0
+      ],
+      [
+        0,
+        32,
+        8,
+        46,
+        0
+      ]
+    ],
+    "prediction_columns": [
+      "CURRENT",
+      "FORMER",
+      "NEVER",
+      "UNKNOWN",
+      "__INVALID__"
+    ],
+    "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+    "by_condition_macro_f1": {
+      "basic": 0.7348727267747476,
+      "messy": 0.9173732070661391,
+      "complex": 0.8929817526464163
+    },
+    "fit_seconds": 22.95,
+    "dev_predict_seconds": 2.976,
+    "dev_notes_per_second": 201.6
+  },
+  "one_year|full-note|svm": {
+    "n": 600,
+    "n_invalid": 0,
+    "invalid_rate": 0.0,
+    "coverage": 1.0,
+    "macro_f1": 0.8483599745910726,
+    "macro_f1_valid_only": 0.8483599745910726,
+    "accuracy_all": 0.88,
+    "current_recall": 0.8895027624309392,
+    "current_precision": 1.0,
+    "per_class": {
+      "CURRENT": {
+        "precision": 1.0,
+        "recall": 0.8895027624309392,
+        "f1": 0.9415204678362573,
+        "support": 181
+      },
+      "FORMER": {
+        "precision": 0.7922077922077922,
+        "recall": 0.953125,
+        "f1": 0.8652482269503546,
+        "support": 192
+      },
+      "NEVER": {
+        "precision": 0.896774193548387,
+        "recall": 0.9858156028368794,
+        "f1": 0.9391891891891891,
+        "support": 141
+      },
+      "UNKNOWN": {
+        "precision": 0.8490566037735849,
+        "recall": 0.5232558139534884,
+        "f1": 0.6474820143884892,
+        "support": 86
+      }
+    },
+    "confusion_matrix_rows_true_cols_pred": [
+      [
+        161,
+        15,
+        3,
+        2,
+        0
+      ],
+      [
+        0,
+        183,
+        5,
+        4,
+        0
+      ],
+      [
+        0,
+        0,
+        139,
+        2,
+        0
+      ],
+      [
+        0,
+        33,
+        8,
+        45,
+        0
+      ]
+    ],
+    "prediction_columns": [
+      "CURRENT",
+      "FORMER",
+      "NEVER",
+      "UNKNOWN",
+      "__INVALID__"
+    ],
+    "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+    "by_condition_macro_f1": {
+      "basic": 0.743347303045934,
+      "messy": 0.9104001059883413,
+      "complex": 0.8929817526464163
+    },
+    "fit_seconds": 12.84,
+    "dev_predict_seconds": 2.813,
+    "dev_notes_per_second": 213.3
+  }
+}

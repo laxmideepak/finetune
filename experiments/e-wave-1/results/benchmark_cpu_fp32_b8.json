@@ -1,0 +1,54 @@
+{
+  "device": "cpu",
+  "device_name": "x86_64",
+  "dtype": "float32",
+  "model": "runs/modernbert-base-shape/model",
+  "requested_revision": "main",
+  "resolved_model_commit": null,
+  "batch": 8,
+  "n": 1019,
+  "max_length": 512,
+  "max_input_tokens": 512,
+  "passes": 2,
+  "snippets_per_second": {
+    "mean": 2.24196821421622,
+    "std": 0.013912450764051343,
+    "min": 2.2280557634521685,
+    "max": 2.255880664980271,
+    "per_pass": [
+      2.255880664980271,
+      2.2280557634521685
+    ]
+  },
+  "non_pad_tokens_per_second": {
+    "mean": 502.4340974826736,
+    "std": 3.1178361936999863,
+    "min": 499.31626128897364,
+    "max": 505.5519336763736
+  },
+  "batch_latency_ms_p50_p95": [
+    3485.197924499971,
+    5481.458522750017
+  ],
+  "peak_memory": {
+    "peak_allocated_gb": null,
+    "peak_reserved_gb": null
+  },
+  "hourly_price": null,
+  "price_hardware": null,
+  "cost_per_million_snippets": null,
+  "cost_per_million_non_pad_tokens": null,
+  "versions": {
+    "python": "3.13.17",
+    "platform": "Linux-6.18.44-fc-v185-x86_64-with-glibc2.39",
+    "packages": {
+      "torch": "2.8.0",
+      "transformers": "4.57.0",
+      "tokenizers": "0.22.0",
+      "numpy": "2.1.3",
+      "pandas": "2.3.1"
+    }
+  },
+  "scope": "warm classifier compute (tokenization + forward); excludes retrieval, aggregation, fallback passes, startup, and I/O",
+  "note": "Batch latency is measured with a device sync per batch; throughput is end-to-end over each pass."
+}

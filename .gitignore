@@ -38,6 +38,10 @@ outputs/
 checkpoints/
 experiments/**
 !experiments/.gitkeep
+# Protocols, analyses and small metric summaries (synthetic/public data only) are tracked.
+!experiments/**/
+!experiments/**/*.md
+!experiments/**/*.json
 to_human/**
 !to_human/.gitkeep
 paper/**

@@ -1,0 +1,103 @@
+{
+  "retrieval_version": "retrieval-v2",
+  "tokenizer": "builtin-whitespace-v1",
+  "extract_seconds_total": 8.98,
+  "extract_notes_per_second": 334.0,
+  "overall": {
+    "notes": 3000,
+    "crops_per_note_mean": 1.823,
+    "notes_without_crop": 128,
+    "retrieval_fn_rate_known_status": 0.001090909090909091,
+    "triggers_per_note_mean": 8.483333333333333,
+    "merge_ratio_triggers_used_per_crop": 4.649296032181386,
+    "crop_tokens_p50": 148.0,
+    "crop_tokens_p95": 353.0,
+    "crop_tokens_max": 512,
+    "crops_over_256": 839,
+    "crops_over_512": 0,
+    "truncated_crops": 0,
+    "notes_with_wider_context": 23,
+    "note_tokens_p50": 447.0,
+    "crop_to_note_token_ratio": 0.6285733635598899,
+    "boilerplate_sentences_dropped": 1656,
+    "within_section_duplicates_dropped": 85,
+    "unpopulated_templates": 15
+  },
+  "by_condition": {
+    "basic": {
+      "notes": 1000,
+      "crops_per_note_mean": 1.337,
+      "notes_without_crop": 82,
+      "retrieval_fn_rate_known_status": 0.0033149171270718232,
+      "triggers_per_note_mean": 3.406,
+      "merge_ratio_triggers_used_per_crop": 2.5474943904263276,
+      "crop_tokens_p50": 88.0,
+      "crop_tokens_p95": 186.0,
+      "crop_tokens_max": 248,
+      "crops_over_256": 0,
+      "crops_over_512": 0,
+      "truncated_crops": 0,
+      "notes_with_wider_context": 0,
+      "note_tokens_p50": 242.0,
+      "crop_to_note_token_ratio": 0.4976385479702854,
+      "boilerplate_sentences_dropped": 645,
+      "within_section_duplicates_dropped": 0,
+      "unpopulated_templates": 0
+    },
+    "complex": {
+      "notes": 1000,
+      "crops_per_note_mean": 2.027,
+      "notes_without_crop": 23,
+      "retrieval_fn_rate_known_status": 0.0,
+      "triggers_per_note_mean": 11.386,
+      "merge_ratio_triggers_used_per_crop": 5.60828811050814,
+      "crop_tokens_p50": 175.0,
+      "crop_tokens_p95": 379.39999999999964,
+      "crop_tokens_max": 512,
+      "crops_over_256": 426,
+      "crops_over_512": 0,
+      "truncated_crops": 0,
+      "notes_with_wider_context": 17,
+      "note_tokens_p50": 559.0,
+      "crop_to_note_token_ratio": 0.656371992411583,
+      "boilerplate_sentences_dropped": 507,
+      "within_section_duplicates_dropped": 48,
+      "unpopulated_templates": 9
+    },
+    "messy": {
+      "notes": 1000,
+      "crops_per_note_mean": 2.105,
+      "notes_without_crop": 23,
+      "retrieval_fn_rate_known_status": 0.0,
+      "triggers_per_note_mean": 10.658,
+      "merge_ratio_triggers_used_per_crop": 5.060807600950119,
+      "crop_tokens_p50": 172.0,
+      "crop_tokens_p95": 368.0,
+      "crop_tokens_max": 511,
+      "crops_over_256": 413,
+      "crops_over_512": 0,
+      "truncated_crops": 0,
+      "notes_with_wider_context": 6,
+      "note_tokens_p50": 566.5,
+      "crop_to_note_token_ratio": 0.656706343808489,
+      "boilerplate_sentences_dropped": 504,
+      "within_section_duplicates_dropped": 37,
+      "unpopulated_templates": 6
+    }
+  },
+  "retrieval_fn_examples": [
+    {
+      "patient_id": "PT0479",
+      "label_native": "NEVER"
+    },
+    {
+      "patient_id": "PT0640",
+      "label_native": "FORMER"
+    },
+    {
+      "patient_id": "PT0839",
+      "label_native": "FORMER"
+    }
+  ],
+  "crop_tokens_all_p50": 148.0
+}
