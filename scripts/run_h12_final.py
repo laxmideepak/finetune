@@ -72,6 +72,32 @@ def with_evidence(model_predict, texts: pd.Series) -> np.ndarray:
     return pred
 
 
+def run_wright(args, s_train: pd.DataFrame, out: Path) -> int:
+    """Wright end-to-end pipeline stage (separate so it can run in a fresh process)."""
+    wright = load(Path(args.wright_dir))
+    wright["split"] = assign_splits(wright)
+    wright["label_one_year_v2"] = wright.apply(one_year_label_v2, axis=1)
+    w_train = add_evidence(wright[wright["split"] == "train"])
+    both = pd.concat([w_train[["evid0", "label_native"]], s_train[["evid0", "label_native"]]], ignore_index=True)
+    both = both[both["evid0"].str.len() > 0]
+    tok_w, model_w = finetune(args.flan, both["evid0"].tolist(), both["label_native"].tolist(), epochs=3, seed=42, lr=3e-4)
+    dev = wright[wright["split"] == "dev"]
+    notes, dates, ages = dev["text"].tolist(), [date.fromisoformat(d) for d in dev["note_date"]], dev["age"].astype(int).tolist()
+    flan_pipe = SmokingStatusPipeline(FlanClassifier(tok_w, model_w), name="flan-t5-base-ft[wright+sdoh]")
+    tfidf_pipe = SmokingStatusPipeline(build_tfidf_classifier().fit(both["evid0"], both["label_native"]), name="tfidf[wright+sdoh]")
+    wres = {}
+    for name, pipe in (("Flan-T5-base FT pipeline", flan_pipe), ("TF-IDF pipeline", tfidf_pipe)):
+        preds = pipe.predict(notes, dates, ages)
+        labels = np.asarray([p.label for p in preds], dtype=object)
+        native = np.asarray([p.native_status for p in preds], dtype=object)
+        wres[name] = {"one_year_v2": summary(dev["label_one_year_v2"].to_numpy(), labels), "native_accuracy": round(float((native == dev["label_native"].to_numpy()).mean()), 4)}
+    results = {"wright_dev_pipeline": wres}
+    print("wright", json.dumps(wres, default=str), flush=True)
+
+    (out / "h12_wright.json").write_text(json.dumps(results, indent=1, default=str))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--flan", required=True)
@@ -82,8 +108,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--hourly-price", type=float, default=0.17)
     parser.add_argument("--skip-wright", action="store_true")
+    parser.add_argument("--wright-only", action="store_true", help="run only the Wright pipeline stage (does not touch SDOH test)")
     args = parser.parse_args(argv)
-    if not args.confirm_locked_test:
+    if not args.confirm_locked_test and not args.wright_only:
         parser.error("this run opens the locked SDOH-NLI test split; pass --confirm-locked-test")
 
     import torch
@@ -94,6 +121,8 @@ def main(argv: list[str] | None = None) -> int:
     results: dict = {}
 
     s_train = add_evidence(load_sdoh(Path(args.sdoh_dir), "train"))
+    if args.wright_only:
+        return run_wright(args, s_train, out)
     train_rows = s_train[s_train["evid0"].str.len() > 0]
     started = time.perf_counter()
     tok, model = finetune(args.flan, train_rows["evid0"].tolist(), train_rows["label_native"].tolist(), epochs=3, seed=42, lr=3e-4)
@@ -123,26 +152,11 @@ def main(argv: list[str] | None = None) -> int:
     print("efficiency", results["efficiency"], flush=True)
 
     if not args.skip_wright:
-        wright = load(Path(args.wright_dir))
-        wright["split"] = assign_splits(wright)
-        wright["label_one_year_v2"] = wright.apply(one_year_label_v2, axis=1)
-        w_train = add_evidence(wright[wright["split"] == "train"])
-        both = pd.concat([w_train[["evid0", "label_native"]], s_train[["evid0", "label_native"]]], ignore_index=True)
-        both = both[both["evid0"].str.len() > 0]
-        tok_w, model_w = finetune(args.flan, both["evid0"].tolist(), both["label_native"].tolist(), epochs=3, seed=42, lr=3e-4)
-        dev = wright[wright["split"] == "dev"]
-        notes, dates, ages = dev["text"].tolist(), [date.fromisoformat(d) for d in dev["note_date"]], dev["age"].astype(int).tolist()
-        flan_pipe = SmokingStatusPipeline(FlanClassifier(tok_w, model_w), name="flan-t5-base-ft[wright+sdoh]")
-        tfidf_pipe = SmokingStatusPipeline(build_tfidf_classifier().fit(both["evid0"], both["label_native"]), name="tfidf[wright+sdoh]")
-        wres = {}
-        for name, pipe in (("Flan-T5-base FT pipeline", flan_pipe), ("TF-IDF pipeline", tfidf_pipe)):
-            preds = pipe.predict(notes, dates, ages)
-            labels = np.asarray([p.label for p in preds], dtype=object)
-            native = np.asarray([p.native_status for p in preds], dtype=object)
-            wres[name] = {"one_year_v2": summary(dev["label_one_year_v2"].to_numpy(), labels), "native_accuracy": round(float((native == dev["label_native"].to_numpy()).mean()), 4)}
-        results["wright_dev_pipeline"] = wres
-        print("wright", json.dumps(wres, default=str), flush=True)
+        del model
+        import gc
 
+        gc.collect()
+        run_wright(args, s_train, out)
     (out / "h12.json").write_text(json.dumps(results, indent=1, default=str))
     return 0
 
