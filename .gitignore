@@ -67,3 +67,5 @@ secrets*
 
 # Logs
 *.log
+# Fine-tuned model folders written by experiments (weights are git-ignored by extension too)
+experiments/**/flan-t5-*/
