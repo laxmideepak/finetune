@@ -1,186 +1,333 @@
-# finetune — Lightweight Smoking-Status Classification from EHR Snippets
+<div align="center">
 
-**A cost-first study of how small an open-source model can get while still classifying smoking status (CURRENT / FORMER / NEVER / UNKNOWN) from regex-extracted ~±100-token EHR note snippets, at million-snippet scale.**
+# 🚭 finetune
 
-> **Status (2026-10-28): research phase complete — design contract v0.9.1, 25-source study queue resolved. No model has been trained yet; starter scripts are syntax-checked only. Next gate: zero-DUA smoke experiments E0–E4.**
+### Lightweight Smoking-Status Classification from EHR Snippets
+
+*How small can an open-source model get while still reading smoking status correctly —<br/>at a million snippets, for the lowest cost per million?*
+
+<br/>
+
+![Status](https://img.shields.io/badge/status-E--wave--1%20done-2ea44f?style=for-the-badge)
+![Design](https://img.shields.io/badge/design%20contract-v0.9.1-1f6feb?style=for-the-badge)
+![Retrieval](https://img.shields.io/badge/retrieval-v2-8250df?style=for-the-badge)
+![Tests](https://img.shields.io/badge/tests-57%20passing-2ea44f?style=for-the-badge)
+
+![Python](https://img.shields.io/badge/python-3.12%20%7C%203.13-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/torch-2.8.0-EE4C2C?logo=pytorch&logoColor=white)
+![Transformers](https://img.shields.io/badge/transformers-4.57.0-FFD21E?logo=huggingface&logoColor=black)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.7.0-F7931E?logo=scikitlearn&logoColor=white)
+![PHI](https://img.shields.io/badge/raw%20ePHI%20to%20cloud-never-critical)
+
+<br/>
+
+[**The problem**](#-the-problem) ·
+[**Pipeline**](#-pipeline-at-a-glance) ·
+[**Model arms**](#-model-arms) ·
+[**Latest results**](#-latest-results--e-wave-1) ·
+[**Evidence**](#-what-the-evidence-says) ·
+[**Quickstart**](#-quickstart) ·
+[**Repo map**](#-repository-map) ·
+[**Roadmap**](#-roadmap)
+
+</div>
 
 ---
 
-## 1. The problem
+## 🎯 The problem
 
-A production EHR pipeline pre-filters clinical notes with regex (`smok`, `tobacco`, …), extracts ~±100 tokens around each match, and asks a model for exactly one label:
+A production EHR pipeline pre-filters clinical notes with regex (`smok`, `tobacco`, `tob`, …), cuts out a sentence-aligned window of roughly ±100 tokens around each match, and asks a model for **exactly one label**:
 
-| Label | Meaning (note-level, at the note's reference time) |
-|---|---|
-| `CURRENT` | Explicit ongoing combustible-tobacco use. **Ratified one-year rule: quit < 1 year ago ⇒ `CURRENT`.** |
-| `FORMER` | Explicit prior use with cessation ≥ 1 year before the note. |
-| `NEVER` | Explicit lifetime never-use (hard rule: **missing evidence is never inferred as NEVER**). |
-| `UNKNOWN` | No mention / retrieval-negative / timing unresolved / family-history only / conflicting evidence. Reason subtype is stored separately. |
+| | Label | Meaning (note-level, at the note's reference time) |
+|:-:|---|---|
+| 🔴 | **`CURRENT`** | Explicit ongoing combustible-tobacco use. **One-year rule: quit < 1 year ago ⇒ `CURRENT`.** |
+| 🟠 | **`FORMER`** | Explicit prior use with cessation ≥ 1 year before the note. |
+| 🟢 | **`NEVER`** | Explicit lifetime never-use. *Missing evidence is never read as NEVER.* |
+| ⚪ | **`UNKNOWN`** | No mention · retrieval-negative · timing unresolved · family-only · denial-only · conflicting. The reason is stored separately. |
 
-Scope is deliberately narrow: **note-level status at the note's own reference time** — longitudinal patient reconciliation, pack-years, and quit-date extraction are separate sideways scopes (see Phase 3+ below). The deciding metric is **cost per million snippets**; latency is secondary. Clinical reliability is not secondary: CURRENT recall/precision and the UNKNOWN subtypes are first-class metrics.
+> [!IMPORTANT]
+> **The deciding number is cost per million snippets.** Latency is secondary. Clinical reliability is not: `CURRENT` recall/precision and the `UNKNOWN` reasons are first-class metrics.
 
-**Why this is hard:** public labeled data is tiny and DUA-gated (~500 notes for the canonical 2006 challenge); clinical notes are 33–54% duplicated text; smoking evidence is frequently copy-forwarded; prompt-based classifiers plateau well below classifier-head fine-tuning; and label taxonomies differ across every corpus we use.
+<details>
+<summary><b>Why this is hard</b></summary>
 
-## 2. Pipeline at a glance
+<br/>
 
-Full renderable version: **[`research/pipeline-diagram.md`](research/pipeline-diagram.md)** (Mermaid; renders on GitHub).
+- Public labeled data is tiny and behind data-use agreements (~500 notes for the canonical 2006 challenge).
+- Clinical notes are 33–54% duplicated text, and smoking history is often copy-forwarded.
+- Prompt-based classifiers plateau well below classifier-head fine-tuning.
+- Every corpus uses a different label taxonomy, and they disagree exactly at the boundaries.
+- The one-year rule needs **date arithmetic** — the note date versus the quit date.
+
+</details>
+
+---
+
+## 🧭 Pipeline at a glance
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#eef4ff','primaryBorderColor':'#1f6feb','lineColor':'#57606a','fontSize':'14px'}}}%%
 flowchart LR
-    A["0·Ingest<br/>privacy + provenance"] --> B["1·Preprocess<br/>sections + note date"]
-    B --> C["2·Trigger retrieval<br/>recall-first regex + audit"]
-    C --> D["3·Crops<br/>sentence-aligned ±100 tok<br/>dedupe · boilerplate out"]
-    D --> E["4·Labels<br/>4-way + one-year rule"]
-    E --> F["5·Arms A/B/C/D/E/G"]
-    F --> G["6·Aggregate crops→note<br/>auditable precedence"]
-    G --> H["7·Abstain<br/>θ → expanded ctx → review"]
-    H --> I["8·Eval<br/>patient-disjoint · locked tests"]
-    I --> J["9·Serve & cost<br/>$/M decided here"]
+    A["🔒 0 · Ingest<br/>privacy + provenance"] --> B["🗂️ 1 · Preprocess<br/>sections + note date"]
+    B --> C["🔎 2 · Trigger retrieval<br/>recall-first regex + audit"]
+    C --> D["✂️ 3 · Crops<br/>sentence-aligned ±100<br/>dedupe · boilerplate out"]
+    D --> E["🏷️ 4 · Labels<br/>4-way + one-year rule"]
+    E --> F["🧠 5 · Model arms<br/>A · B · C · D · E · G"]
+    F --> G["🧮 6 · Aggregate<br/>crops → note"]
+    G --> H["🚦 7 · Abstain<br/>θ → wider context → review"]
+    H --> I["📏 8 · Evaluate<br/>patient-disjoint · locked tests"]
+    I --> J["💵 9 · Serve & cost<br/>$ / M decided here"]
+
+    classDef hot fill:#fff1e5,stroke:#d1242f,color:#24292f;
+    class C,J hot;
 ```
 
-Stage contracts, boundary tests B1–B11, and risks R1–R7 live in **[`research/pipeline-design.md`](research/pipeline-design.md)**.
+Stage contracts, boundary tests B1–B11 and risks R1–R7 → **[`docs/design/pipeline-design.md`](docs/design/pipeline-design.md)** · more diagrams → **[`docs/design/pipeline-diagram.md`](docs/design/pipeline-diagram.md)**
 
-## 3. Model arms (wave-1 configs, locked)
+---
 
-| Arm | Model | Role | Notes |
-|---|---|---|---|
-| **C** ★ | BioClinical-ModernBERT-base + 4-way head | **Primary** | BF16, 3 seeds, eff. batch 32, ≤5 epochs, max_len 512, truncation refusal |
-| D | Plain ModernBERT-base | Ablation | Isolates the value of clinical pretraining |
-| E | Ettin-32M | Cost upset | Fits crops at max_len 256 |
-| A | TF-IDF word+char n-grams → LR / LinearSVM | Floor guard | If A ≈ C, the neural gradient is noise — redesign crops |
-| B | MiniLM frozen 384-d + LR head | Fallback only | Priority dropped after few-shot evidence (below) |
-| G | Qwen3-0.6B SFT LoRA | Challenger | Source-order crops only; instruction as prefix (verified: reordering hurt decoders on smoking, −10.1%, p=0.018) |
+## 🧠 Model arms
 
-**Deployment gate (pre-registered):** the smallest model within 1 macro-F1 point of the best (95% CI overlap accepted) without losing >2 pp CURRENT recall — reported alongside its $/M.
+| Arm | Model | Role | Configuration |
+|:-:|---|---|---|
+| **C** ⭐ | BioClinical-ModernBERT-base + 4-way head | **Primary** | BF16 · 3 seeds · eff. batch 32 · ≤ 5 epochs · max_len 512 · refuses truncation |
+| **D** | ModernBERT-base | Ablation | Isolates the value of clinical pre-training |
+| **E** | Ettin-32M | Cost upset | Crops at max_len 256 |
+| **A** | TF-IDF word + char n-grams → LR / LinearSVM | Floor guard | If A ≈ C, the neural gain is noise — redesign the crops |
+| **B** | MiniLM frozen 384-d + LR head | Fallback only | Deprioritised after the few-shot evidence |
+| **G** | Qwen3-0.6B SFT LoRA | Challenger | Source-order crops; instruction as prefix only |
 
-## 4. What the evidence says (verified, not assumed)
+> [!NOTE]
+> **Deployment rule (pre-registered):** the smallest model whose macro-F1 is non-inferior to the best (paired patient-cluster bootstrap, margin 1 point) **without** losing more than 2 points of `CURRENT` recall — reported with its $/M.
 
-All facts below were verified first-hand against full texts/abstracts in the 25-item study queue (`research/pipeline-design.md` §12, `research-log.md` entries 1–12).
+---
+
+## 📊 Latest results — E-wave-1
+
+<sub>2026-10-29 · Wright synthetic benchmark (3,000 notes, CC-BY-4.0) · patient-disjoint 60/20/20 · dev split only, test locked · <b>comparability set, never gold</b></sub>
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### 🔎 E0 — retrieval
+| | v1 | **v2** |
+|---|:-:|:-:|
+| Known-status notes with **no** crop | 27 / 2,750 | **3 / 2,750** |
+| Miss rate | 0.98% | **0.11%** |
+| Crop words p50 / p95 | 148 / 354 | 148 / 353 |
+| Truncated crops | 0 | 0 |
+
+v2 adds the shorthand v1 missed: `Tob:` · `+tob` · `nonsmoker` · `pkyr` · `pk-yr` · `pack-yrs`.
+
+</td>
+<td width="50%" valign="top">
+
+#### 🧪 E3 — TF-IDF floor (macro-F1)
+| Labels | Crops | Full note |
+|---|:-:|:-:|
+| Wright native | **0.979** | 0.952 |
+| Our one-year rule | **0.888** | 0.848 |
+
+Crops beat full notes in every setting (+2.7 to +4.2 points).
+
+</td>
+</tr>
+</table>
+
+> [!WARNING]
+> **Under the one-year rule the errors are all date arithmetic.** The floor model called **6 of 6** recent quitters `FORMER` (should be `CURRENT`), and **30 of 36** "quit date unclear" notes `FORMER` (should be `UNKNOWN`). ➜ **The note's reference date must be part of the model input.**
+
+| | Finding | Consequence |
+|:-:|---|---|
+| 1 | Wright native labels are easy (TF-IDF 0.98) | Cannot rank neural arms — use as a pipeline check only |
+| 2 | 5% of crops exceed 512 *model* tokens after re-tokenizing | Retrieval tokenizer must equal the model tokenizer |
+| 3 | CPU, base-size encoder: **2.2 snippets/s** on 4 vCPU (≈ **$19–25 / M**) | CPU fp32 is not competitive; GPU numbers needed |
+| 4 | TF-IDF: ~350 notes/s on one core (≈ $0.15 / M) | The cost floor every neural arm must justify |
+
+Full write-up → **[`docs/results/e-wave-1-results-2026-10-29.md`](docs/results/e-wave-1-results-2026-10-29.md)**
+
+---
+
+## 🔬 What the evidence says
+
+<sub>Every row was checked against the full text or abstract (study queue S-1…S-25 in the design contract).</sub>
 
 | Finding | Source | Design consequence |
 |---|---|---|
-| Classifier-head full fine-tuning reaches F1 ≈ 0.85–0.90 on 4-class smoking status | i2b2-2006 winners; Palmer 2019 (0.90 on i2b2-2006 **and** local notes) | Encoder-first; full fine-tuning is the primary path |
-| Prompt-verbalizer classification plateaus ~0.67 micro-F1 even with the full 398-note training set; few-shot prompting only 0.35–0.47 macro-F1 | Landi & Alleva arXiv 2312.09469; KOTI, BMC MIDM 2025 | Few-shot arms are fallbacks, never primary |
-| For smoking specifically, the significant gain is **evidence-in-window vs tail-truncation** (+15.8–21.6% F1, p<0.001) — template placement itself is not significant | KOTI full text (N2C2 smoking task, 502 notes) | Trigger-anchored crops, not template tricks |
-| Full cross-patient dedup of training notes **hurts** smoking F1 (−11.9% ClinicalBERT, −32.6% GatorTron); within-note + boilerplate removal helps (+14.2%) | Landi & Alleva arXiv 2312.09469 | Dedupe within notes + filter boilerplate; **never** cross-patient train-side dedup |
-| Patient leakage is real: 3–8% same-patient sentences across CV folds when splits aren't patient-stratified | MSEP (JMIR 2026) | Patient-disjoint splits + template-cluster checks are mandatory |
-| Cross-corpus degradation: 0.901 in-domain → 0.774 cross-domain (−13 pp) | n2c2/UW 2022 (ocad012) | Risk R7: per-corpus locked tests, no blended metrics |
-| ClinicalBERT for quantitative smoking fields: 0.97 holdout / **0.86 external**; gpt-oss-20B zero-shot only 0.72–0.79 | SmokeBERT, JCO CCI 2025 | Teacher scope locked to 4-class **status**; pack-years/quit-dates are sideways scope |
-| 19% of current tobacco users are documented **only** in narrative text | Lybarger, JAMIA 2023 (ocad073) | Motivates extraction; retrieval audit lane (random 200 + enriched 50) |
-| Clinical text is 33–54.2% duplicated; copy-forward carries much of the smoking history | Steinkamp 2022; dedup paper | B7 dedup policy rewired (see above) |
+| Classifier-head full fine-tuning reaches F1 ≈ 0.85–0.90 on 4-class smoking | i2b2-2006 winners · Palmer 2019 | Encoder-first; full fine-tuning is the primary path |
+| Prompt-verbalizer classification plateaus ~0.67 micro-F1; few-shot 0.35–0.47 macro-F1 | Landi & Alleva 2312.09469 · KOTI 2025 | Few-shot arms are fallbacks, never primary |
+| Evidence-in-window beats tail truncation by +15.8–21.6% F1 | KOTI full text | Trigger-anchored crops |
+| Full cross-patient dedup **hurts** smoking F1 (−11.9% / −32.6%); within-note dedup helps (+14.2%) | Landi & Alleva 2312.09469 | Within-note dedup + boilerplate filter only |
+| 3–8% same-patient leakage across folds when splits aren't patient-stratified | MSEP, JMIR 2026 | Patient-disjoint splits are mandatory |
+| Cross-corpus drop 0.901 → 0.774 (−13 points) | n2c2/UW 2022 | One locked test per corpus, no blended metrics |
+| Fine-tuned ClinicalBERT 0.97 vs gpt-oss-20B zero-shot 0.72–0.79 on quantitative fields | SmokeBERT, JCO CCI 2025 | Teacher scope = 4-class status only |
+| 19% of current tobacco users are documented **only** in narrative text | Lybarger, JAMIA 2023 | Extraction is worth it; retrieval audit lane |
 
-## 5. Repository map
+---
 
-```
-├── MASTER_CONTEXT.md          # single source of truth: user, scope, phases, hypotheses
-├── findings.md                # narrative synthesis of everything verified
-├── research-log.md            # decision timeline (entry per research pass)
-├── research-state.yaml        # autoresearch state: contract version, verified list, next move
-├── research/
-│   ├── pipeline-design.md     # ★ design contract v0.9.1 — stages 0–9, B1–B11, R1–R7, study queue S-1..S-25
-│   ├── pipeline-diagram.md    # Mermaid diagrams: end-to-end flow, arms, dedup rules
-│   ├── external-report-2026-10-28.md    # external expert report #1 (verbatim)
-│   └── external-report2-guide-2026-10-28.md  # external expert report #2 (verbatim)
-├── literature/
-│   └── survey.md              # verified literature + dataset cross-check + pricing snapshot
-├── src/
-│   ├── extract_windows.py     # candidate crop extraction (char-offset preserving; no labels)
-│   ├── train_encoder.py       # encoder classifier starter (CSV: text,label,patient_id,note_id,split,leakage_group)
-│   ├── train_generative.py    # optional Qwen3-0.6B LoRA starter
-│   └── benchmark_encoder.py   # warm sequential-batch end-to-end latency/throughput benchmark
-├── data/                      # empty — real corpora arrive only after DUA (never committed)
-├── experiments/               # reserved for E0–E4 smoke outputs
-├── paper/                     # reserved
-└── to_human/                  # reserved
-```
+## 🗄️ Datasets & access
 
-**Read order for newcomers:** `MASTER_CONTEXT.md` → `research/pipeline-design.md` → `research/pipeline-diagram.md` → `findings.md` → `research-log.md`.
-
-## 6. Datasets & access (verified 2026-10-28)
-
-| Corpus | Size | Access | Use in this project |
+| Corpus | Size | Access | Role here |
 |---|---|---|---|
-| **i2b2/n2c2-2006 Smoking Challenge** | ~502 discharge summaries, 5 native labels → our 4 | DUA-gated (portal; TLS cert issue — manual signing in progress) | Primary gold benchmark once DUA executes |
-| **SHAC** (n2c2/UW 2022) | 4,405 social-history sections (4,480 in the 2021 creation paper) | PhysioNet credentialing **+** UW DUA (two gates) | Tobacco event extraction; taxonomy `{none, current, past}` |
-| **SDOH-NLI** | 29,335 split items | Ungated, CC-BY-4.0 (tasksource) | Format/smoke corpus **only** — not a label source |
-| **Wright synthetic LCS benchmark** | 3,000 notes + reference labels | CC-BY-4.0 — `github.com/vclic/smokingbenchmark` (+ `smokingeval`) | E2 pipeline-comparability set + one-year-rule sensitivity slice — **never gold** (its rules: any documented quit ⇒ FORMER) |
-| **MIMIC-III** | — | Credentialed | Deferred (Phase 3+) |
+| **i2b2/n2c2-2006 Smoking** | ~502 discharge summaries | 🔐 DUA (manual signing in progress) | Primary gold benchmark |
+| **SHAC** (n2c2/UW 2022) | 4,405 social-history sections | 🔐 PhysioNet + UW DUA | Tobacco events `{none, current, past}` |
+| **Wright synthetic LCS** | 3,000 notes + labels | 🟢 CC-BY-4.0 · [`vclic/smokingbenchmark`](https://github.com/vclic/smokingbenchmark) | E-wave pipeline set + one-year-rule stress test — **never gold** |
+| **SDOH-NLI** | 29,335 items | 🟢 CC-BY-4.0 | Format smoke only — not a label source |
+| **MIMIC-III** | — | 🔐 Credentialed | Deferred (Phase 3+) |
 
-**Label taxonomies differ at the boundaries.** Every corpus's label file is emitted separately and never mixed; mappings live in the harmonization register §9-4.3 of the design doc.
+> [!CAUTION]
+> Label taxonomies disagree at the boundaries (e.g. Wright: *any* quit ⇒ FORMER; ours: quit < 1 year ⇒ CURRENT). Each corpus's labels are kept separate; mappings live in the harmonization register (§9-4.3 of the design contract).
 
-## 7. Privacy & compliance posture
+---
 
-- **No raw ePHI leaves the institution-approved environment.** A policy gate (`policy_can_egress()`) defaults to false; cloud calls require an executed BAA or de-identified/public data.
-- **Ratified teacher route (2026-10-28):** cloud APIs **on public/de-identified corpora only** first; privately hosted gpt-oss-20B is a Phase-3 gate decision. Regardless of route, no raw ePHI to any cloud API.
-- **Teacher scope is 4-class status only** — zero-shot teachers are weak on pack-years/quit-dates (verified 0.72–0.79 vs 0.97 for a fine-tuned clinical encoder).
-- De-identification basis: HHS OCR guidance — Expert Determination or Safe Harbor (content reviewed 2025-02-03). Cropping is not de-identification; the BAA boundary is enforced in Stage 0.
-- No auto-uploads to the HF Hub (`push_to_hub=False` in all training configs).
+## 🛡️ Privacy & compliance
 
-## 8. Cost model
+- 🔒 **No raw ePHI leaves the approved environment.** `policy_can_egress()` defaults to `false`; cloud calls need an executed BAA or de-identified/public data.
+- ☁️ **Teacher route (ratified):** cloud APIs on public/de-identified corpora only; a privately hosted gpt-oss-20B is a Phase-3 decision.
+- 🏷️ **Teacher scope = 4-class status only.**
+- ✂️ Cropping is **not** de-identification; HHS Expert Determination or Safe Harbor applies.
+- 🚫 No automatic uploads to the Hugging Face Hub (`push_to_hub=False` everywhere).
 
-The project's deciding number:
+---
 
+## 💵 Cost model
+
+```text
+$ / M snippets = 1,000,000 × H / (3600 × R)
+                 H = hardware $/hour     R = snippets/second (warm, incl. tokenization)
 ```
-$/M snippets = 1,000,000 × H / (3600 × R)
-                 H = GPU $/hour,  R = snippets/second (warm, incl. tokenization)
-```
 
-Reference points gathered so far (per 1,000 notes, cloud frontier models): Luna $0.12–0.21 … Sonnet $3.76–6.61; prompt caching cut Sonnet cost 47%; reasoning-model payloads ran ~15k input tokens/note because of answer options. The fine-tuning comparison arms are budgeted at **$50–200 total**; local M4/16 GB is prototype-only (verified MPS OOM lesson: fp32 LoRA bs=8 @512 OOMs — use bf16 + grad checkpointing + small batches).
+| Reference point | $ / M |
+|---|--:|
+| Cloud frontier LLMs, full notes (published) | ≈ 120 – 6,610 |
+| Base-size encoder, CPU fp32, 4 vCPU (E4, measured) | ≈ 19 – 25 |
+| TF-IDF floor, one CPU core (E3, measured) | ≈ 0.15 |
+| Base-size encoder on T4 / L4 / A10G | ⏳ pending |
 
-## 9. Roadmap
+Fine-tuning budget: **$50–200 total**.
 
-| Phase | Content | Status |
-|---|---|---|
-| 1 | Research: datasets, models, methods, architecture, costs (8 deliverables) | ✅ complete — design v0.9.1 |
-| — | **E0–E4 zero-DUA smokes**: trigger sanity, MPS encode smoke, E2 dry run on the Wright benchmark, TF-IDF floor, cost baseline | ⏭ next |
-| 2 | DUA execution (i2b2 + SHAC); dataset construction kit + labeling policy | ⏳ user-side signing |
-| 3 | Fine-tune arms A–G on rented GPU ($50–200); comparison report | pending Phase 2 |
-| 4 | Winner deployment recipe + dynamic-INT8 slot + real-environment validation | pending Phase 3 |
-| 5 | Real-EHR adaptation (self-training/AL + teacher decision) — PHI never leaves | pending Phase 4 |
+---
 
-## 10. Quickstart (development only — no labeled data yet)
+## 🚀 Quickstart
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install torch transformers pandas scikit-learn numpy
-# optional for the generative arm / HF datasets:
-# pip install peft accelerate datasets
-
-# inspect the crop extractor (module; requires a fast tokenizer with offset mappings)
-python -c "import src.extract_windows as e; print(e.CANDIDATES.pattern[:80])"
-
-# starters accept --help; they refuse to pretend data exists
-python src/train_encoder.py --help
-python src/benchmark_encoder.py --help
-python src/train_generative.py --help
+pip install -r requirements/dev.txt          # encoder stack + pytest
+# generative arm lives in a separate env:    pip install -r requirements/generative.txt
 ```
 
-Environment facts: Apple M4 / 16 GB / MPS for prototyping; `torch 2.8.0`, `transformers 4.57.0`; `peft`/`accelerate`/`datasets` are **not** installed yet. Rented GPU (HF Jobs A10G/L4) is the benchmark environment. `src/*` scripts are starters — **none have been executed against real data**.
+```bash
+python scripts/check_env.py                  # verify pins, devices, label policy, data contract
+python -m pytest -q tests                    # 57 unit tests
+python scripts/smoke_train.py                # offline tiny-model train → save → reload → predict
+python src/extract_windows.py --demo         # see the crop extractor on a built-in note
+```
 
-## 11. Evaluation contract (non-negotiable)
+<details>
+<summary><b>Re-run E-wave-1 on the Wright benchmark</b></summary>
 
-- Patient-disjoint, hash-deduped, template-cluster-checked splits; one locked test set per source corpus, untouched by any optimization.
-- **macro-F1 primary**; per-class P/R/F1; CURRENT recall and precision reported separately; ECE + risk-coverage; UNKNOWN-subtype breakdown; retrieval-layer FN rate; full-pipeline metrics never blended with crop-classifier metrics.
-- Patient-cluster bootstrap CIs; paired comparisons; α = 0.1 randomization for 2006 comparability.
-- The teacher's score is **never** ground truth anywhere in eval; human-only locked tests gate everything.
+<br/>
 
-## 12. Documentation index
+```bash
+git clone --depth 1 https://github.com/vclic/smokingbenchmark ../smokingbenchmark
 
-| File | What it is |
-|---|---|
-| [`MASTER_CONTEXT.md`](MASTER_CONTEXT.md) | User, pipeline, scope, hypotheses, phases |
-| [`research/pipeline-design.md`](research/pipeline-design.md) | Design contract v0.9.1 — the implementation must conform and log deviations |
-| [`research/pipeline-diagram.md`](research/pipeline-diagram.md) | Mermaid diagrams (end-to-end, arms, dedup rules) |
-| [`findings.md`](findings.md) | Narrative synthesis of all verified findings |
-| [`research-log.md`](research-log.md) | Chronological decision log (12 research passes) |
-| [`research-state.yaml`](research-state.yaml) | Machine-readable state: contract version, verified items, next move |
-| [`literature/survey.md`](literature/survey.md) | Literature survey, dataset cross-check, pricing snapshot |
+# E0 retrieval sanity + E3 TF-IDF floor
+python scripts/run_wright_smoke.py --wright-dir ../smokingbenchmark \
+    --out experiments/E0_E3_wright_retrieval-v2
 
-## 13. License, citation, contact
+# E4 speed baseline (random-weight, ModernBERT-base-shaped; speed only)
+python scripts/build_shape_model.py --wright-dir ../smokingbenchmark \
+    --splits experiments/E0_E3_wright_retrieval-v2/labels_and_splits.csv \
+    --out runs/modernbert-base-shape
+python src/benchmark_encoder.py --model runs/modernbert-base-shape/model \
+    --csv runs/modernbert-base-shape/dev_crops_le512.csv --device cpu --batch 8 --passes 2
+```
 
-License: TBD (research artifacts are being prepared for public release; code and data licensing decisions are recorded per artifact). Third-party datasets keep their own licenses and DUAs — nothing gated is redistributed here.
+</details>
 
-Citation: not yet published. Until then, cite this repository:
-`laxmideepak/finetune — Lightweight Smoking-Status Classification from EHR Snippets (2026), https://github.com/laxmideepak/finetune`.
+---
 
-Maintainer: [@laxmideepak](https://github.com/laxmideepak). Issues and design critiques are welcome — every empirical claim in this repo is expected to come with a source anchor or an experiment ID.
+## 📁 Repository map
+
+```text
+finetune/
+├── 📄 README.md
+├── 📦 requirements.txt            → requirements/core.txt
+├── 📦 requirements/
+│   ├── core.txt                  # pinned encoder / inference stack
+│   ├── dev.txt                   # core + pytest
+│   └── generative.txt            # core + peft + trl (separate env)
+│
+├── 🧠 src/                        # library + entry points
+│   ├── label_policy.py           # ★ single source of truth for labels & the one-year rule
+│   ├── data_contract.py          # shared dataset contract for every entry point
+│   ├── extract_windows.py        # Stage 3 crop extractor (retrieval-v2)
+│   ├── train_encoder.py          # arms C / D / E
+│   ├── train_generative.py       # arm G (Qwen3 LoRA)
+│   ├── evaluate_generative.py
+│   ├── benchmark_encoder.py      # warm throughput → $/M
+│   ├── compare_models.py         # paired patient-cluster bootstrap
+│   ├── metrics.py
+│   └── provenance.py
+│
+├── 🛠️ scripts/
+│   ├── check_env.py              # environment readiness check
+│   ├── smoke_train.py            # offline end-to-end smoke
+│   ├── run_wright_smoke.py       # E0 + E3 on the Wright benchmark
+│   └── build_shape_model.py      # E4 offline speed model
+│
+├── ✅ tests/                      # 57 unit tests + synthetic fixture
+│
+├── 📚 docs/
+│   ├── MASTER_CONTEXT.md         # ★ start here: user, scope, phases, hypotheses
+│   ├── design/                   # pipeline-design.md (contract v0.9.1) · pipeline-diagram.md
+│   ├── results/                  # experiment write-ups (E-wave-1)
+│   ├── literature/               # survey.md — verified literature + pricing
+│   ├── external-reports/         # two external expert reports (verbatim)
+│   └── tracking/                 # findings.md · research-log.md · research-state.yaml
+│
+└── 🔒 data/ · experiments/ · paper/ · to_human/   # git-ignored workspaces (never committed)
+```
+
+**Read order for newcomers:** [`MASTER_CONTEXT`](docs/MASTER_CONTEXT.md) → [`pipeline-design`](docs/design/pipeline-design.md) → [`pipeline-diagram`](docs/design/pipeline-diagram.md) → [`E-wave-1 results`](docs/results/e-wave-1-results-2026-10-29.md) → [`findings`](docs/tracking/findings.md) → [`research-log`](docs/tracking/research-log.md)
+
+---
+
+## 🗺️ Roadmap
+
+| Phase | Content | Status |
+|:-:|---|:-:|
+| 1 | Research: datasets, models, methods, architecture, costs | ✅ design v0.9.1 |
+| E | **Zero-DUA smokes E0–E4** on the Wright benchmark | 🟡 E0 · E3 done · E1 · E2 · E4 need model weights + GPU |
+| 2 | DUA execution (i2b2 + SHAC); dataset kit + labeling policy | ⏳ user-side signing |
+| 3 | Fine-tune arms A–G on rented GPU ($50–200); comparison report | ⏳ after Phase 2 |
+| 4 | Winner deployment recipe + INT8 slot + real-environment validation | ⏳ |
+| 5 | Real-EHR adaptation (self-training / active learning) — PHI never leaves | ⏳ |
+
+**Next moves**
+- [ ] Re-run E0 with the real ModernBERT tokenizer as the retrieval tokenizer
+- [ ] Put the note's reference date into the visible model input
+- [ ] E2: arm C toy fine-tune on Wright (one-year + native labels) on GPU
+- [ ] E4: throughput on T4 / L4 / A10G with the real model
+
+---
+
+## 📐 Evaluation contract
+
+- Patient-disjoint, hash-deduped, template-cluster-checked splits; **one locked test set per corpus**, untouched by any optimization.
+- **macro-F1 primary** · per-class P/R/F1 · `CURRENT` recall and precision separately · ECE + risk-coverage · `UNKNOWN`-reason breakdown · retrieval false-negative rate.
+- Patient-cluster bootstrap CIs; paired comparisons.
+- A teacher model's output is **never** ground truth in evaluation.
+
+---
+
+<div align="center">
+
+**License:** TBD — third-party datasets keep their own licenses and DUAs; nothing gated is redistributed here.
+
+**Cite:** *laxmideepak/finetune — Lightweight Smoking-Status Classification from EHR Snippets (2026)*, https://github.com/laxmideepak/finetune
+
+Maintained by [@laxmideepak](https://github.com/laxmideepak) · issues and design critiques welcome — every claim here should come with a source or an experiment ID.
+
+</div>

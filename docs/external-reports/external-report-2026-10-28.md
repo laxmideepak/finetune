@@ -1,7 +1,7 @@
 # External Researcher Report — verbatim source (received 2026-10-28)
 
 > Source: report from another AI researcher as pasted by the user. Claims marked "verify" in
-> MASTER_CONTEXT.md section 9 were not independently verified by us. Design guidance and the
+> docs/MASTER_CONTEXT.md section 9 were not independently verified by us. Design guidance and the
 > TRL training skeleton are treated as recommendations, not evidence.
 
 ---

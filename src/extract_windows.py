@@ -2,7 +2,7 @@
 
 Candidate extraction only: this module never assigns a smoking label.
 
-Design contract (research/pipeline-design.md Stage 3, v0.9.1):
+Design contract (docs/design/pipeline-design.md Stage 3, v0.9.1):
   * one pinned retrieval tokenizer produces fixed character spans;
   * each trigger expands to sentence boundaries inside its section;
   * overlapping spans merge in source order;

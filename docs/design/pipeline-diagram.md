@@ -1,7 +1,7 @@
 # Pipeline Diagram — Smoking-Status Extraction from EHR Note Crops
 
-> Visual companion to `research/pipeline-design.md` v0.9.1 (as of 2026-10-28, research passes S-1..S-25 complete).
-> Render: on GitHub (native Mermaid), or `npx -y @mermaid-js/mermaid-cli -i research/pipeline-diagram.md -o /tmp/pipe.pdf`.
+> Visual companion to `docs/design/pipeline-design.md` v0.9.1 (as of 2026-10-28, research passes S-1..S-25 complete).
+> Render: on GitHub (native Mermaid), or `npx -y @mermaid-js/mermaid-cli -i docs/design/pipeline-diagram.md -o /tmp/pipe.pdf`.
 
 ## 1. End-to-end pipeline (Stages 0→9)
 

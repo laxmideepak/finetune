@@ -1,3 +1,3 @@
 # Compatibility alias: the core stack is enough for the encoder, TF-IDF arm,
 # retrieval, and benchmark.
--r requirements-core.txt
+-r requirements/core.txt

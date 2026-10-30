@@ -4,7 +4,7 @@ This script trains only. Classification metrics, invalid-output counting, and
 checkpoint selection live in ``src/evaluate_generative.py`` so that the
 generative arm gets the same dev-selected evaluation machinery as the encoder.
 
-Environment: install ``requirements-generative.txt`` in a separate environment
+Environment: install ``requirements/generative.txt`` in a separate environment
 from the encoder arm; TRL/transformers version drift is the known risk R5.
 
 Example:

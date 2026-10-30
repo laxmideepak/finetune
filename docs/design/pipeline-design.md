@@ -2,7 +2,7 @@
 
 > v0.9.1 (same day): full-text integration pass — S-7/S-11/S-12/S-13 fully ingested, cross-dataset harmonization register added (§9-4.3), risk R7 added, study queue extended to S-24, E2 benchmark located.
 Compiled 2026-10-28 by the design-research pass (user directive: "design and research the pipeline extensively before implementation").
-Method: applied brainstorming-research-ideas frameworks (F1–F10) to our specific pipeline; every factual claim is anchored to a verified primary source (see §16). This document is the design contract for the implementation stage; changes go through the decision log in research-log.md.
+Method: applied brainstorming-research-ideas frameworks (F1–F10) to our specific pipeline; every factual claim is anchored to a verified primary source (see §16). This document is the design contract for the implementation stage; changes go through the decision log in docs/tracking/research-log.md.
 
 ---
 
@@ -200,7 +200,7 @@ Status legend: [x] ingested+verified into design; [ ] queued.
 |---|---|---|---|---|
 | S-1 | Uzuner et al. JAMIA 2008 (PMC2274873) | 4,6,8 | label rules verbatim; κ/agreement methods; metric conventions (micro vs macro), significance α=0.1 randomization | [x] |
 | S-2 | guide#2 (research/external-report2…) | all | ranking, cost model, split sizes, caution on MiniLM truncation, scripts | [x] |
-| S-3 | guide#1 (research/external-report…) | 4,5 | TRL skeleton; label policy philosophy; deployment checklist | [x] |
+| S-3 | guide#1 (docs/external-reports/external-report…) | 4,5 | TRL skeleton; label policy philosophy; deployment checklist | [x] |
 | S-4 | ModernBERT blog (Dec 2024) | 5,3 | no token_type_ids (collator!), FA2, alternating attn 128-local + global-every-3, unpadding | [x] |
 | S-5 | BioClinical-ModernBERT HF card (thomas-sounack) | 5 | MIT, 150M, corpus incl. glossary, Social-History bench 58.5 | [x] |
 | S-6 | TRL SFTTrainer docs (current) | 5(G) | verified completion_only_loss/packing/model_init_kwargs/eos_token defaults; Qwen3-0.6B quickstart; DFT optional | [x] |

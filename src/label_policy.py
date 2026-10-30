@@ -2,7 +2,7 @@
 
 Every consumer imports from here: annotation guides, teacher prompts, training
 configs, aggregation, and evaluation. If a rule changes, bump POLICY_VERSION and
-record the change in research-log.md. Do not duplicate policy text anywhere else.
+record the change in docs/tracking/research-log.md. Do not duplicate policy text anywhere else.
 
 Ratified rule (2026-10-28): cessation strictly less than one year before the
 note's reference time counts as CURRENT. Cessation one year or more counts as

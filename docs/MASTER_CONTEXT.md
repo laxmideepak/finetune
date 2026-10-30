@@ -78,7 +78,7 @@
 
 ## 9. External Researcher Report — Integration (received 2026-10-28)
 
-Verbatim source saved at `research/external-report-2026-10-28.md`. These items
+Verbatim source saved at `docs/external-reports/external-report-2026-10-28.md`. These items
 **amend / refine the plan above**. Verification status marked on factual claims.
 
 ### 9.1 Adopted decisions (now binding for this project)
@@ -130,7 +130,7 @@ Verbatim source saved at `research/external-report-2026-10-28.md`. These items
 
 ## 10. External Researcher Guide #2 — Integration (received 2026-10-28)
 
-Second expert guide ingested. Verbatim source: `research/external-report2-guide-2026-10-28.md`.
+Second expert guide ingested. Verbatim source: `docs/external-reports/external-report2-guide-2026-10-28.md`.
 Its four runnable starter scripts are already extracted, syntax-checked, and saved in `src/`:
 `extract_windows.py`, `train_encoder.py`, `train_generative.py`, `benchmark_encoder.py`
 (syntax-verified; per the guide itself, **not** yet executed with models/CUDA — treat as starters, not a validated pipeline).

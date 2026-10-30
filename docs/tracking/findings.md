@@ -6,7 +6,7 @@ What is the smallest, most accurate, most economical open-source model and train
 
 ## Current Understanding
 
-(borrowed from two external expert reports; see research/ for verbatim sources — our own evidence accumulates below)
+(borrowed from two external expert reports; see docs/external-reports/ for verbatim sources — our own evidence accumulates below)
 
 - **Task definition** (binding): note-level smoking status at the note's reference time. NOT longitudinal patient history. "Note says unknown" is a label; "model is uncertain" is a routing signal for abstention/review/expanded context.
 - **Adaptation direction**: encoder-first. Fully fine-tuned clinical encoder (~150M BioClinical-ModernBERT) + 4-way head is the production candidate; small generative LLMs (Qwen3-0.6B LoRA first, then Qwen3.5-0.8B) are challenger/annotation-assistant/fallback arms. TRL `completion_only_loss` only for the decoder arm.
@@ -18,7 +18,7 @@ What is the smallest, most accurate, most economical open-source model and train
 
 ## Key Results
 
-(no training runs yet — verification-phase results below, details in literature/survey.md)
+(no training runs yet — verification-phase results below, details in docs/literature/survey.md)
 
 1. **i2b2-2006 verified from the primary paper** (Uzuner et al., JAMIA 2008, PMC2274873). Both external reports were accurate (502 = 398+104), and we recovered the *exact* rules both reports only summarized: one-year rule (quit <1 yr ago → Current Smoker), Smoker → timing-unresolvable, marijuana excluded, secondhand → Non-Smoker, "No tobacco" → Non-Smoker. Test is tiny and Unknown-majority (63/104); Smoker has 3 test records → macro-F1 on this benchmark is structurally harsh. Best 2006 system = sentence-level extraction + rules (0.90 micro / 0.76 macro) — direct precedent for our snippet→aggregate architecture.
 2. **Fresh 2024-2026 survey found directly on-topic work** (all verified via abstracts):
