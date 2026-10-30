@@ -5,6 +5,12 @@
     python scripts/pipeline_cli.py train --wright-dir ../smokingbenchmark --sdoh-dir ../SDOH-NLI \
         --out runs/pipeline-tfidf.pkl
 
+    # recommended model: fine-tuned Flan-T5-base (CPU, no GPU needed), or the TF-IDF -> Flan cascade
+    python scripts/pipeline_cli.py train --classifier flan --flan-base ../models/flan-t5-base \
+        --wright-dir ../smokingbenchmark --sdoh-dir ../SDOH-NLI --out runs/pipeline-flan.pkl
+    python scripts/pipeline_cli.py train --classifier cascade --share 0.4 --flan-base ../models/flan-t5-base \
+        --wright-dir ../smokingbenchmark --sdoh-dir ../SDOH-NLI --out runs/pipeline-cascade.pkl
+
     # label one note
     python scripts/pipeline_cli.py predict --model runs/pipeline-tfidf.pkl --note note.txt \
         --note-date 2025-06-01 --age 64
@@ -45,8 +51,20 @@ def cmd_train(args) -> int:
         frames.append(add_evidence(load_sdoh(Path(args.sdoh_dir), "train"))[["evid0", "label_native"]])
     data = pd.concat(frames, ignore_index=True)
     data = data[data["evid0"].str.len() > 0]
-    classifier = build_tfidf_classifier().fit(data["evid0"], data["label_native"])
-    pipeline = SmokingStatusPipeline(classifier, name=f"tfidf-svm-evidence[{'wright+sdoh' if args.sdoh_dir else 'wright'}]")
+    source = "wright+sdoh" if args.sdoh_dir else "wright"
+    if args.classifier == "tfidf":
+        classifier = build_tfidf_classifier().fit(data["evid0"], data["label_native"])
+    else:
+        from src.flan_status import CascadeClassifier, FlanStatusClassifier
+
+        if not args.flan_base:
+            raise SystemExit("--flan-base (a Flan-T5 folder, e.g. from scripts/fetch_flan_t5.py) is required")
+        flan_dir = args.flan_out or str(Path(args.out).with_suffix("")) + "-flan"
+        classifier = FlanStatusClassifier.train(args.flan_base, data["evid0"], data["label_native"], flan_dir)
+        if args.classifier == "cascade":
+            threshold = CascadeClassifier.fit_threshold(build_tfidf_classifier, data["evid0"], data["label_native"], share=args.share)
+            classifier = CascadeClassifier(build_tfidf_classifier().fit(data["evid0"], data["label_native"]), classifier, threshold)
+    pipeline = SmokingStatusPipeline(classifier, name=f"{args.classifier}-evidence[{source}]")
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     pipeline.save(args.out)
     print(json.dumps({"saved": args.out, "train_rows": int(len(data)), "versions": pipeline.versions}, indent=1))
@@ -99,6 +117,10 @@ def main(argv: list[str] | None = None) -> int:
     t.add_argument("--wright-dir", required=True)
     t.add_argument("--sdoh-dir", default=None)
     t.add_argument("--out", required=True)
+    t.add_argument("--classifier", choices=("tfidf", "flan", "cascade"), default="tfidf")
+    t.add_argument("--flan-base", default=None, help="Flan-T5 folder to fine-tune (flan / cascade)")
+    t.add_argument("--flan-out", default=None, help="where to save the fine-tuned Flan-T5 (default: next to --out)")
+    t.add_argument("--share", type=float, default=0.4, help="cascade: share of sentences routed to Flan (exploratory)")
     p = sub.add_parser("predict")
     p.add_argument("--model", required=True)
     p.add_argument("--note", required=True)
