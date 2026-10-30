@@ -1,0 +1,101 @@
+{
+ "sdoh_validation": {
+  "ZS-base": {
+   "macro_f1": 0.49955394068297293,
+   "macro_f1_smoking_bearing": 0.2834249084249084,
+   "per_class_f1": {
+    "CURRENT": 0.5,
+    "FORMER": 0.538,
+    "NEVER": 0.095,
+    "UNKNOWN": 0.865
+   },
+   "current_recall": 0.3333333333333333,
+   "current_precision": 1.0
+  },
+  "ZS-base+guard": {
+   "macro_f1": 0.4950805008944543,
+   "macro_f1_smoking_bearing": 0.4438259109311741,
+   "per_class_f1": {
+    "CURRENT": 0.5,
+    "FORMER": 0.538,
+    "NEVER": 0.0,
+    "UNKNOWN": 0.942
+   },
+   "current_recall": 0.3333333333333333,
+   "current_precision": 1.0
+  },
+  "ZS-large": {
+   "macro_f1": 0.5287306896002548,
+   "macro_f1_smoking_bearing": 0.3977207977207977,
+   "per_class_f1": {
+    "CURRENT": 0.4,
+    "FORMER": 0.667,
+    "NEVER": 0.154,
+    "UNKNOWN": 0.894
+   },
+   "current_recall": 0.3333333333333333,
+   "current_precision": 0.5
+  },
+  "ZS-large+guard": {
+   "macro_f1": 0.5035087719298246,
+   "macro_f1_smoking_bearing": 0.45585585585585586,
+   "per_class_f1": {
+    "CURRENT": 0.4,
+    "FORMER": 0.667,
+    "NEVER": 0.0,
+    "UNKNOWN": 0.947
+   },
+   "current_recall": 0.3333333333333333,
+   "current_precision": 0.5
+  },
+  "TF-IDF S": {
+   "macro_f1": 0.8312267225325884,
+   "macro_f1_smoking_bearing": 0.8187500000000001,
+   "per_class_f1": {
+    "CURRENT": 0.8,
+    "FORMER": 0.875,
+    "NEVER": 0.667,
+    "UNKNOWN": 0.983
+   },
+   "current_recall": 0.6666666666666666,
+   "current_precision": 1.0
+  },
+  "Rules": {
+   "macro_f1": 0.6660015961691939,
+   "macro_f1_smoking_bearing": 0.6285714285714286,
+   "per_class_f1": {
+    "CURRENT": 0.857,
+    "FORMER": 0.857,
+    "NEVER": 0.0,
+    "UNKNOWN": 0.95
+   },
+   "current_recall": 0.75,
+   "current_precision": 1.0
+  }
+ },
+ "sdoh_train_cv_exploratory": {
+  "ZS-base": 0.616032046892324,
+  "ZS-base+guard": 0.7164175618336704,
+  "ZS-base+guard_per_class": {
+   "CURRENT": 0.763,
+   "FORMER": 0.625,
+   "NEVER": 0.522,
+   "UNKNOWN": 0.951
+  },
+  "ZS-large": 0.6825235961281029,
+  "ZS-large+guard": 0.750769291514762,
+  "ZS-large+guard_per_class": {
+   "CURRENT": 0.79,
+   "FORMER": 0.78,
+   "NEVER": 0.478,
+   "UNKNOWN": 0.952
+  },
+  "TF-IDF S": 0.7759661212440971
+ },
+ "wright_dev_native": {
+  "ZS-large": 0.8089133025439782,
+  "ZS-large+guard": 0.8299159087707506,
+  "changed": 6,
+  "changed_to_wrong": 0
+ }
+}
