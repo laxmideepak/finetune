@@ -1,0 +1,47 @@
+{
+  "W->S": {
+    "macro_f1_mean": 0.599,
+    "sd": 0.048,
+    "per_class_mean": {
+      "CURRENT": 0.695,
+      "FORMER": 0.624,
+      "NEVER": 0.237,
+      "UNKNOWN": 0.841
+    }
+  },
+  "S->S": {
+    "macro_f1_mean": 0.793,
+    "sd": 0.08,
+    "per_class_mean": {
+      "CURRENT": 0.841,
+      "FORMER": 0.84,
+      "NEVER": 0.521,
+      "UNKNOWN": 0.969
+    }
+  },
+  "W+S->S": {
+    "macro_f1_mean": 0.779,
+    "sd": 0.071,
+    "per_class_mean": {
+      "CURRENT": 0.836,
+      "FORMER": 0.854,
+      "NEVER": 0.456,
+      "UNKNOWN": 0.969
+    }
+  },
+  "Rules": {
+    "macro_f1_mean": 0.772,
+    "sd": 0.066,
+    "per_class_mean": {
+      "CURRENT": 0.706,
+      "FORMER": 0.878,
+      "NEVER": 0.555,
+      "UNKNOWN": 0.947
+    }
+  },
+  "W+S_minus_S": {
+    "mean": -0.014,
+    "folds_better": 11,
+    "folds": 25
+  }
+}

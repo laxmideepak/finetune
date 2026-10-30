@@ -1,0 +1,420 @@
+{
+  "eval": "validation",
+  "sdoh_label_counts": {
+    "train": {
+      "UNKNOWN": 457,
+      "CURRENT": 59,
+      "FORMER": 35,
+      "NEVER": 19
+    },
+    "validation": {
+      "UNKNOWN": 88,
+      "CURRENT": 12,
+      "FORMER": 8,
+      "NEVER": 1
+    }
+  },
+  "sdoh_unknown_reasons": {
+    "no-mention": 67,
+    "denial-only": 21
+  },
+  "retrieval_negative_on_smoking_bearing": 0,
+  "smoking_bearing_eval_premises": 42,
+  "arms": {
+    "W->S": {
+      "n": 109,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.6531420192710515,
+      "macro_f1_valid_only": 0.6531420192710515,
+      "accuracy_all": 0.7798165137614679,
+      "current_recall": 0.75,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571,
+          "support": 12
+        },
+        "FORMER": {
+          "precision": 0.6666666666666666,
+          "recall": 1.0,
+          "f1": 0.8,
+          "support": 8
+        },
+        "NEVER": {
+          "precision": 0.047619047619047616,
+          "recall": 1.0,
+          "f1": 0.09090909090909091,
+          "support": 1
+        },
+        "UNKNOWN": {
+          "precision": 1.0,
+          "recall": 0.7613636363636364,
+          "f1": 0.864516129032258,
+          "support": 88
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          9,
+          2,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          19,
+          67,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "macro_f1_smoking_bearing": 0.43701298701298696
+    },
+    "S->S": {
+      "n": 109,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.8312267225325884,
+      "macro_f1_valid_only": 0.8312267225325884,
+      "accuracy_all": 0.9541284403669725,
+      "current_recall": 0.6666666666666666,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 0.6666666666666666,
+          "f1": 0.8,
+          "support": 12
+        },
+        "FORMER": {
+          "precision": 0.875,
+          "recall": 0.875,
+          "f1": 0.875,
+          "support": 8
+        },
+        "NEVER": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666,
+          "support": 1
+        },
+        "UNKNOWN": {
+          "precision": 0.967032967032967,
+          "recall": 1.0,
+          "f1": 0.9832402234636871,
+          "support": 88
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          8,
+          1,
+          1,
+          2,
+          0
+        ],
+        [
+          0,
+          7,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          88,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "macro_f1_smoking_bearing": 0.8187500000000001
+    },
+    "W+S->S": {
+      "n": 109,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.705050505050505,
+      "macro_f1_valid_only": 0.705050505050505,
+      "accuracy_all": 0.963302752293578,
+      "current_recall": 0.8333333333333334,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 0.8333333333333334,
+          "f1": 0.9090909090909091,
+          "support": 12
+        },
+        "FORMER": {
+          "precision": 1.0,
+          "recall": 0.875,
+          "f1": 0.9333333333333333,
+          "support": 8
+        },
+        "NEVER": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        },
+        "UNKNOWN": {
+          "precision": 0.9565217391304348,
+          "recall": 1.0,
+          "f1": 0.9777777777777777,
+          "support": 88
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          10,
+          0,
+          0,
+          2,
+          0
+        ],
+        [
+          0,
+          7,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          88,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "macro_f1_smoking_bearing": 0.688866930171278
+    },
+    "Rules": {
+      "n": 109,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.6660015961691939,
+      "macro_f1_valid_only": 0.6660015961691939,
+      "accuracy_all": 0.9174311926605505,
+      "current_recall": 0.75,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571,
+          "support": 12
+        },
+        "FORMER": {
+          "precision": 1.0,
+          "recall": 0.75,
+          "f1": 0.8571428571428571,
+          "support": 8
+        },
+        "NEVER": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 1
+        },
+        "UNKNOWN": {
+          "precision": 0.9340659340659341,
+          "recall": 0.9659090909090909,
+          "f1": 0.9497206703910615,
+          "support": 88
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          9,
+          0,
+          0,
+          3,
+          0
+        ],
+        [
+          0,
+          6,
+          0,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          3,
+          85,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "macro_f1_smoking_bearing": 0.6285714285714286
+    },
+    "W+S->W(dev)": {
+      "n": 600,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 1.0,
+      "macro_f1_valid_only": 1.0,
+      "accuracy_all": 1.0,
+      "current_recall": 1.0,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 175
+        },
+        "FORMER": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 234
+        },
+        "NEVER": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 141
+        },
+        "UNKNOWN": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 50
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          175,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          234,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          141,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          50,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible"
+    }
+  },
+  "paired_bootstrap_W+S_minus_S": {
+    "mean_delta": -0.07987443174112235,
+    "ci95": [
+      -0.25268695468405633,
+      0.09371590701028054
+    ],
+    "p_le_0": 0.6565
+  },
+  "paired_bootstrap_W+S_minus_W": {
+    "mean_delta": 0.05533618795224495,
+    "ci95": [
+      -0.045985230842730596,
+      0.164560741297801
+    ],
+    "p_le_0": 0.1485
+  }
+}
