@@ -126,6 +126,7 @@ flowchart LR
 |---|:-:|:-:|:-:|
 | 🥇 **Flan-T5-base, fine-tuned** | **0.868** | **0.877** | **0.68** |
 | Cascade: TF-IDF → Flan on 40% | 0.865 | — | 0.70 |
+| Flan-T5-large (780M), fine-tuned | 0.813 | — | 0.47 |
 | Flan-T5-small, fine-tuned | 0.795 | — | 0.49 |
 | TF-IDF word+char SVM (same training rows as Flan) | 0.791 | 0.616 | 0.55 |
 | Flan-T5-large, zero-shot + policy guard | 0.750 | — | 0.48 |
@@ -172,6 +173,7 @@ Flan-T5-base vs TF-IDF on the same rows: **+0.077** on CV (95% CI +0.016…+0.14
 | H12 | Locked-test confirmation | Confirmed in direction (SDOH test 0.877 vs 0.616 on 15 smoking items; Wright **dev** 0.972) |
 | Audit | Independent adversarial review | No leakage; 6 wording corrections applied (fair baseline 0.791; test gap fragile) |
 | H13 | Cascade for cost | 97% of the gain at ~40% of the cost (exploratory) |
+| H14 | Is bigger better? Flan-T5-large (780M) | No: 0.813 vs base 0.868 at this data size |
 
 Write-ups: [`experiments/*/analysis.md`](experiments) · leaderboard: [`experiments/sdoh-cv-leaderboard.json`](experiments/sdoh-cv-leaderboard.json) · E-wave-1: [`docs/results/e-wave-1-results-2026-10-29.md`](docs/results/e-wave-1-results-2026-10-29.md)
 
@@ -349,7 +351,8 @@ finetune/
 **Next moves**
 - [x] Quit-date reader + note date for the one-year rule (H5)
 - [x] Pretrained models without the HF Hub: SciBERT (scispaCy/S3), Flan-T5 (GCS)
-- [ ] Fine-tune Flan-T5-large (780M) — does bigger still help?
+- [x] Fine-tune Flan-T5-large (780M) — no, base (250M) is better at this data size (H14)
+- [ ] Open the locked Wright test split once for the final pipelines (H15, running)
 - [ ] SciBERT with a small-data recipe (H8b, locked, deferred)
 - [ ] Validate on i2b2-2006 once the DUA is signed
 
