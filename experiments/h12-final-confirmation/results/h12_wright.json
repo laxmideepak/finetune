@@ -1,0 +1,34 @@
+{
+ "wright_dev_pipeline": {
+  "Flan-T5-base FT pipeline": {
+   "one_year_v2": {
+    "n": 600,
+    "macro_f1": 0.9718,
+    "per_class_f1": {
+     "CURRENT": 1.0,
+     "FORMER": 0.963,
+     "NEVER": 0.996,
+     "UNKNOWN": 0.928
+    },
+    "current_recall": 1.0,
+    "current_precision": 1.0
+   },
+   "native_accuracy": 0.9983
+  },
+  "TF-IDF pipeline": {
+   "one_year_v2": {
+    "n": 600,
+    "macro_f1": 0.9734,
+    "per_class_f1": {
+     "CURRENT": 1.0,
+     "FORMER": 0.965,
+     "NEVER": 1.0,
+     "UNKNOWN": 0.928
+    },
+    "current_recall": 1.0,
+    "current_precision": 1.0
+   },
+   "native_accuracy": 1.0
+  }
+ }
+}
