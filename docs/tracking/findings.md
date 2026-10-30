@@ -18,6 +18,8 @@ What is the smallest, most accurate, most economical open-source model and train
 
 ## Key Results
 
+- **H6-EVIDENCE (2026-10-30, Wright dev) — feed the classifier the evidence sentence, not the whole crop.** Same TF-IDF SVM, trained on trigger sentences only: native status 600/600 (crops: 0.978), one-year macro-F1 **0.973** with the quit resolver, CURRENT recall/precision 1.000/1.000. In short template notes, merged crops carry distractors ("Retired, former nurse", family history). **Wright is now saturated for status classification** and cannot rank models; the next evidence must come from independent, human-written text.
+
 - **H5-DATE (2026-10-30, Wright dev, comparability only) — the one-year rule is a rule, not a pattern.** A native-status classifier (TF-IDF SVM) followed by a train-only rule-based quit-time resolver plus the note date scores **0.947 macro-F1 (crops) / 0.957 (full-note resolver)** vs 0.888 for the same features learning the one-year labels directly; recent quitters 0/6 → 6/6; "former, timing unclear" UNKNOWN recall 0.08 → 0.92. With gold status the resolver alone reaches 0.971–0.981. The remaining error is native status on short template notes (`basic` 0.898), not dates. Design consequence: the deployed model's job is native status + evidence; the one-year rule is applied by a deterministic, auditable layer that needs the note date as metadata.
 - **E-wave-1 (2026-10-29)**: retrieval-v2 lexicon cut missed known-status notes 27 → 3 of 2,750; crops beat full notes for the TF-IDF floor (+2.7 to +4.2 points); Wright native labels are too easy to rank neural arms (TF-IDF 0.979); CPU fp32 base encoder ≈ 2.2 snippets/s (≈ $19–25/M).
 

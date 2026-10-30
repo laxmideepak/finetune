@@ -1,0 +1,510 @@
+{
+  "mode": "dev",
+  "resolver_version": "quit-resolver-v1",
+  "arms": {
+    "S-crop+R|v1": {
+      "n": 600,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.947489173954938,
+      "macro_f1_valid_only": 0.947489173954938,
+      "accuracy_all": 0.9566666666666667,
+      "current_recall": 0.9558011049723757,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 0.9558011049723757,
+          "f1": 0.9774011299435028,
+          "support": 181
+        },
+        "FORMER": {
+          "precision": 0.989010989010989,
+          "recall": 0.9375,
+          "f1": 0.9625668449197861,
+          "support": 192
+        },
+        "NEVER": {
+          "precision": 0.9655172413793104,
+          "recall": 0.9929078014184397,
+          "f1": 0.9790209790209791,
+          "support": 141
+        },
+        "UNKNOWN": {
+          "precision": 0.81,
+          "recall": 0.9418604651162791,
+          "f1": 0.8709677419354839,
+          "support": 86
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          173,
+          0,
+          1,
+          7,
+          0
+        ],
+        [
+          0,
+          180,
+          1,
+          11,
+          0
+        ],
+        [
+          0,
+          0,
+          140,
+          1,
+          0
+        ],
+        [
+          0,
+          2,
+          3,
+          81,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "label_version": "label_one_year",
+      "by_condition_macro_f1": {
+        "basic": 0.8977398570421826,
+        "messy": 0.9755127467893425,
+        "complex": 0.9721244131455399
+      },
+      "timing_unresolved_recall": 0.9166666666666666,
+      "recent_quitter_recall": "6/6",
+      "native_accuracy": 0.9783333333333334
+    },
+    "S-crop+R|v2": {
+      "n": 600,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.9493577794933727,
+      "macro_f1_valid_only": 0.9493577794933727,
+      "accuracy_all": 0.9583333333333334,
+      "current_recall": 0.9558011049723757,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 0.9558011049723757,
+          "f1": 0.9774011299435028,
+          "support": 181
+        },
+        "FORMER": {
+          "precision": 0.9945054945054945,
+          "recall": 0.9378238341968912,
+          "f1": 0.9653333333333334,
+          "support": 193
+        },
+        "NEVER": {
+          "precision": 0.9655172413793104,
+          "recall": 0.9929078014184397,
+          "f1": 0.9790209790209791,
+          "support": 141
+        },
+        "UNKNOWN": {
+          "precision": 0.81,
+          "recall": 0.9529411764705882,
+          "f1": 0.8756756756756757,
+          "support": 85
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          173,
+          0,
+          1,
+          7,
+          0
+        ],
+        [
+          0,
+          181,
+          1,
+          11,
+          0
+        ],
+        [
+          0,
+          0,
+          140,
+          1,
+          0
+        ],
+        [
+          0,
+          1,
+          3,
+          81,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "label_version": "label_one_year_v2",
+      "by_condition_macro_f1": {
+        "basic": 0.8977398570421826,
+        "messy": 0.9823736780258518,
+        "complex": 0.9721244131455399
+      },
+      "timing_unresolved_recall": 0.9428571428571428,
+      "recent_quitter_recall": "6/6",
+      "native_accuracy": 0.9783333333333334
+    },
+    "S-evid+R|v1": {
+      "n": 600,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.9714109419991772,
+      "macro_f1_valid_only": 0.9714109419991772,
+      "accuracy_all": 0.9766666666666667,
+      "current_recall": 1.0,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 181
+        },
+        "FORMER": {
+          "precision": 0.989010989010989,
+          "recall": 0.9375,
+          "f1": 0.9625668449197861,
+          "support": 192
+        },
+        "NEVER": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 141
+        },
+        "UNKNOWN": {
+          "precision": 0.875,
+          "recall": 0.9767441860465116,
+          "f1": 0.9230769230769231,
+          "support": 86
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          181,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          180,
+          0,
+          12,
+          0
+        ],
+        [
+          0,
+          0,
+          141,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          84,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "label_version": "label_one_year",
+      "by_condition_macro_f1": {
+        "basic": 0.9488041370394311,
+        "messy": 0.9931249095382835,
+        "complex": 0.9721244131455399
+      },
+      "timing_unresolved_recall": 0.9444444444444444,
+      "recent_quitter_recall": "6/6",
+      "native_accuracy": 1.0
+    },
+    "S-evid+R|v2": {
+      "n": 600,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.973377532228361,
+      "macro_f1_valid_only": 0.973377532228361,
+      "accuracy_all": 0.9783333333333334,
+      "current_recall": 1.0,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 181
+        },
+        "FORMER": {
+          "precision": 0.9945054945054945,
+          "recall": 0.9378238341968912,
+          "f1": 0.9653333333333334,
+          "support": 193
+        },
+        "NEVER": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 141
+        },
+        "UNKNOWN": {
+          "precision": 0.875,
+          "recall": 0.9882352941176471,
+          "f1": 0.9281767955801105,
+          "support": 85
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          181,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          181,
+          0,
+          12,
+          0
+        ],
+        [
+          0,
+          0,
+          141,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          84,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "label_version": "label_one_year_v2",
+      "by_condition_macro_f1": {
+        "basic": 0.9488041370394311,
+        "messy": 1.0,
+        "complex": 0.9721244131455399
+      },
+      "timing_unresolved_recall": 0.9714285714285714,
+      "recent_quitter_recall": "6/6",
+      "native_accuracy": 1.0
+    },
+    "S-evid+1+R|v1": {
+      "n": 600,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.9714109419991772,
+      "macro_f1_valid_only": 0.9714109419991772,
+      "accuracy_all": 0.9766666666666667,
+      "current_recall": 1.0,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 181
+        },
+        "FORMER": {
+          "precision": 0.989010989010989,
+          "recall": 0.9375,
+          "f1": 0.9625668449197861,
+          "support": 192
+        },
+        "NEVER": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 141
+        },
+        "UNKNOWN": {
+          "precision": 0.875,
+          "recall": 0.9767441860465116,
+          "f1": 0.9230769230769231,
+          "support": 86
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          181,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          180,
+          0,
+          12,
+          0
+        ],
+        [
+          0,
+          0,
+          141,
+          0,
+          0
+        ],
+        [
+          0,
+          2,
+          0,
+          84,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "label_version": "label_one_year",
+      "by_condition_macro_f1": {
+        "basic": 0.9488041370394311,
+        "messy": 0.9931249095382835,
+        "complex": 0.9721244131455399
+      },
+      "timing_unresolved_recall": 0.9444444444444444,
+      "recent_quitter_recall": "6/6",
+      "native_accuracy": 1.0
+    },
+    "S-evid+1+R|v2": {
+      "n": 600,
+      "n_invalid": 0,
+      "invalid_rate": 0.0,
+      "coverage": 1.0,
+      "macro_f1": 0.973377532228361,
+      "macro_f1_valid_only": 0.973377532228361,
+      "accuracy_all": 0.9783333333333334,
+      "current_recall": 1.0,
+      "current_precision": 1.0,
+      "per_class": {
+        "CURRENT": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 181
+        },
+        "FORMER": {
+          "precision": 0.9945054945054945,
+          "recall": 0.9378238341968912,
+          "f1": 0.9653333333333334,
+          "support": 193
+        },
+        "NEVER": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "support": 141
+        },
+        "UNKNOWN": {
+          "precision": 0.875,
+          "recall": 0.9882352941176471,
+          "f1": 0.9281767955801105,
+          "support": 85
+        }
+      },
+      "confusion_matrix_rows_true_cols_pred": [
+        [
+          181,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          181,
+          0,
+          12,
+          0
+        ],
+        [
+          0,
+          0,
+          141,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          84,
+          0
+        ]
+      ],
+      "prediction_columns": [
+        "CURRENT",
+        "FORMER",
+        "NEVER",
+        "UNKNOWN",
+        "__INVALID__"
+      ],
+      "note": "macro_f1 counts invalid outputs as errors; macro_f1_valid_only excludes them so format failures stay visible",
+      "label_version": "label_one_year_v2",
+      "by_condition_macro_f1": {
+        "basic": 0.9488041370394311,
+        "messy": 1.0,
+        "complex": 0.9721244131455399
+      },
+      "timing_unresolved_recall": 0.9714285714285714,
+      "recent_quitter_recall": "6/6",
+      "native_accuracy": 1.0
+    }
+  }
+}
