@@ -66,42 +66,65 @@ def download(prefix: str, cache: Path) -> Path:
     return cache
 
 
-def read_params(cache: Path) -> dict:
-    import zarr
+class LazyParams(dict):
+    """Maps parameter name -> zarr array, read only when indexed (keeps peak memory low)."""
 
-    params = {}
-    for array_dir in sorted(p for p in cache.iterdir() if p.is_dir() and p.name.startswith("target.")):
-        params[array_dir.name[len("target.") :]] = zarr.open(str(array_dir), mode="r")[...]
-    return params
+    def __init__(self, cache: Path):
+        super().__init__()
+        self._dirs = {p.name[len("target.") :]: p for p in cache.iterdir() if p.is_dir() and p.name.startswith("target.")}
+
+    def __getitem__(self, key):
+        import zarr
+
+        return zarr.open(str(self._dirs[key]), mode="r")[...]
+
+    def __contains__(self, key):
+        return key in self._dirs
 
 
-def to_hf_state(params: dict, n_enc: int, n_dec: int) -> dict:
+def read_params(cache: Path) -> LazyParams:
+    return LazyParams(cache)
+
+
+def name_map(n_enc: int, n_dec: int) -> list[tuple[str, str, bool]]:
+    """(hf_name, t5x_name, transpose) for every Flan-T5 parameter."""
+    m = [("shared.weight", "token_embedder.embedding", False)]
+    for stack, n in (("encoder", n_enc), ("decoder", n_dec)):
+        for i in range(n):
+            p, b = f"{stack}.layers_{i}.", f"{stack}.block.{i}.layer."
+            m.append((b + "0.layer_norm.weight", p + ("pre_attention_layer_norm.scale" if stack == "encoder" else "pre_self_attention_layer_norm.scale"), False))
+            att = "attention" if stack == "encoder" else "self_attention"
+            for src, dst in (("query", "q"), ("key", "k"), ("value", "v"), ("out", "o")):
+                m.append((b + f"0.SelfAttention.{dst}.weight", p + f"{att}.{src}.kernel", True))
+            mlp = "1" if stack == "encoder" else "2"
+            if stack == "decoder":
+                m.append((b + "1.layer_norm.weight", p + "pre_cross_attention_layer_norm.scale", False))
+                for src, dst in (("query", "q"), ("key", "k"), ("value", "v"), ("out", "o")):
+                    m.append((b + f"1.EncDecAttention.{dst}.weight", p + f"encoder_decoder_attention.{src}.kernel", True))
+            m.append((b + f"{mlp}.layer_norm.weight", p + "pre_mlp_layer_norm.scale", False))
+            for w in ("wi_0", "wi_1", "wo"):
+                m.append((b + f"{mlp}.DenseReluDense.{w}.weight", p + f"mlp.{w}.kernel", True))
+        m.append((f"{stack}.final_layer_norm.weight", f"{stack}.{stack}_norm.scale", False))
+        m.append((f"{stack}.block.0.layer.0.SelfAttention.relative_attention_bias.weight", f"{stack}.relpos_bias.rel_embedding", True))
+    m.append(("lm_head.weight", "decoder.logits_dense.kernel", True))
+    return m
+
+
+def load_streaming(model, params, n_enc: int, n_dec: int) -> list[str]:
+    """Copy one array at a time into the model's parameters; returns HF names not filled."""
     import numpy as np
     import torch
 
-    t = lambda a: torch.from_numpy(np.ascontiguousarray(a))  # noqa: E731
-    sd = {"shared.weight": t(params["token_embedder.embedding"])}
-    for stack, n in (("encoder", n_enc), ("decoder", n_dec)):
-        for i in range(n):
-            p = f"{stack}.layers_{i}."
-            b = f"{stack}.block.{i}.layer."
-            sd[b + "0.layer_norm.weight"] = t(params[p + "pre_attention_layer_norm.scale" if stack == "encoder" else p + "pre_self_attention_layer_norm.scale"])
-            att = "attention" if stack == "encoder" else "self_attention"
-            for src, dst in (("query", "q"), ("key", "k"), ("value", "v"), ("out", "o")):
-                sd[b + f"0.SelfAttention.{dst}.weight"] = t(params[p + f"{att}.{src}.kernel"].T)
-            mlp = "1" if stack == "encoder" else "2"
-            if stack == "decoder":
-                sd[b + "1.layer_norm.weight"] = t(params[p + "pre_cross_attention_layer_norm.scale"])
-                for src, dst in (("query", "q"), ("key", "k"), ("value", "v"), ("out", "o")):
-                    sd[b + f"1.EncDecAttention.{dst}.weight"] = t(params[p + f"encoder_decoder_attention.{src}.kernel"].T)
-            sd[b + f"{mlp}.layer_norm.weight"] = t(params[p + "pre_mlp_layer_norm.scale"])
-            sd[b + f"{mlp}.DenseReluDense.wi_0.weight"] = t(params[p + "mlp.wi_0.kernel"].T)
-            sd[b + f"{mlp}.DenseReluDense.wi_1.weight"] = t(params[p + "mlp.wi_1.kernel"].T)
-            sd[b + f"{mlp}.DenseReluDense.wo.weight"] = t(params[p + "mlp.wo.kernel"].T)
-        sd[f"{stack}.final_layer_norm.weight"] = t(params[f"{stack}.{stack}_norm.scale"])
-        sd[f"{stack}.block.0.layer.0.SelfAttention.relative_attention_bias.weight"] = t(params[f"{stack}.relpos_bias.rel_embedding"].T)
-    sd["lm_head.weight"] = t(params["decoder.logits_dense.kernel"].T)
-    return sd
+    state = model.state_dict()
+    filled = set()
+    with torch.no_grad():
+        for hf_name, t5x_name, transpose in name_map(n_enc, n_dec):
+            array = params[t5x_name]
+            array = array.T if transpose else array
+            state[hf_name].copy_(torch.from_numpy(np.ascontiguousarray(array)))
+            filled.add(hf_name)
+            del array
+    return [k for k in state if k not in filled and not k.endswith("embed_tokens.weight")]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -118,13 +141,15 @@ def main(argv: list[str] | None = None) -> int:
     out = Path(args.out)
     cache = Path(args.cache) if args.cache else out.with_name(out.name + "-t5x")
     params = read_params(download(prefix, cache))
-    config = T5Config(vocab_size=params["token_embedder.embedding"].shape[0], feed_forward_proj="gated-gelu", tie_word_embeddings=False,
+    import zarr
+
+    vocab = zarr.open(str(cache / "target.token_embedder.embedding"), mode="r").shape[0]
+    config = T5Config(vocab_size=vocab, feed_forward_proj="gated-gelu", tie_word_embeddings=False,
                       dropout_rate=0.1, relative_attention_num_buckets=32, relative_attention_max_distance=128,
                       decoder_start_token_id=0, pad_token_id=0, eos_token_id=1, **dims)
     model = T5ForConditionalGeneration(config)
-    missing, unexpected = model.load_state_dict(to_hf_state(params, dims["num_layers"], dims["num_decoder_layers"]), strict=False)
-    missing = [m for m in missing if not m.endswith("embed_tokens.weight")]  # tied to shared.weight
-    print(f"missing={missing} unexpected={unexpected}")
+    missing = load_streaming(model, params, dims["num_layers"], dims["num_decoder_layers"])
+    print(f"missing={missing}")
     out.mkdir(parents=True, exist_ok=True)
     (out / "spiece.model").write_bytes(_get(f"{BUCKET}/{VOCAB}"))
     tokenizer = T5Tokenizer(str(out / "spiece.model"), extra_ids=100, legacy=False)
