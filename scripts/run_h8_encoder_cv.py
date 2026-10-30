@@ -109,6 +109,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--arms", default="tfidf-S,enc-S,tfidf-WS,enc-WS")
     parser.add_argument("--folds", default="0,1,2,3,4")
+    parser.add_argument("--epochs-s", type=int, default=4, help="epochs for enc-S (H8: 4; H8b: 20)")
+    parser.add_argument("--lr", type=float, default=3e-5, help="H8: 3e-5; H8b: 2e-5")
     args = parser.parse_args(argv)
 
     import torch
@@ -146,8 +148,8 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 train_df = a if arm == "enc-S" else ws
                 train_df = train_df[train_df["evid0"].str.len() > 0]
-                epochs = 4 if arm == "enc-S" else 3
-                tok, model, truncated = train_encoder(args.model, train_df["evid0"].tolist(), train_df["label_native"].tolist(), epochs=epochs, max_len=args.max_len, seed=args.seed)
+                epochs = args.epochs_s if arm == "enc-S" else 3
+                tok, model, truncated = train_encoder(args.model, train_df["evid0"].tolist(), train_df["label_native"].tolist(), epochs=epochs, max_len=args.max_len, seed=args.seed, lr=args.lr)
                 pred, sps = predict_encoder(tok, model, b["evid0"].tolist(), max_len=args.max_len)
                 info = {"epochs": epochs, "train_rows": int(len(train_df)), "train_truncated": int(truncated), "infer_sentences_per_s": round(sps, 1)}
                 del model
