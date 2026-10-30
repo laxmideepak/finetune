@@ -1,0 +1,68 @@
+{
+ "Flan-T5-base pipeline": {
+  "one_year_v2": {
+   "n": 600,
+   "macro_f1": 0.9654,
+   "per_class_f1": {
+    "CURRENT": 0.994,
+    "FORMER": 0.958,
+    "NEVER": 1.0,
+    "UNKNOWN": 0.909
+   },
+   "current_recall": 0.994475138121547,
+   "current_precision": 0.994475138121547
+  },
+  "one_year_v1": {
+   "n": 600,
+   "macro_f1": 0.9575,
+   "per_class_f1": {
+    "CURRENT": 0.994,
+    "FORMER": 0.947,
+    "NEVER": 1.0,
+    "UNKNOWN": 0.889
+   },
+   "current_recall": 0.994475138121547,
+   "current_precision": 0.994475138121547
+  },
+  "native_accuracy": 0.9983,
+  "by_condition_v2": {
+   "basic": 0.9641,
+   "messy": 0.986,
+   "complex": 0.9469
+  },
+  "recent_quitter_recall": "5/6"
+ },
+ "TF-IDF pipeline": {
+  "one_year_v2": {
+   "n": 600,
+   "macro_f1": 0.9667,
+   "per_class_f1": {
+    "CURRENT": 0.997,
+    "FORMER": 0.961,
+    "NEVER": 1.0,
+    "UNKNOWN": 0.909
+   },
+   "current_recall": 0.994475138121547,
+   "current_precision": 1.0
+  },
+  "one_year_v1": {
+   "n": 600,
+   "macro_f1": 0.9589,
+   "per_class_f1": {
+    "CURRENT": 0.997,
+    "FORMER": 0.95,
+    "NEVER": 1.0,
+    "UNKNOWN": 0.889
+   },
+   "current_recall": 0.994475138121547,
+   "current_precision": 1.0
+  },
+  "native_accuracy": 0.9983,
+  "by_condition_v2": {
+   "basic": 0.9641,
+   "messy": 0.986,
+   "complex": 0.9508
+  },
+  "recent_quitter_recall": "5/6"
+ }
+}

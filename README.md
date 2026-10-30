@@ -135,13 +135,13 @@ flowchart LR
 
 Flan-T5-base vs TF-IDF on the same rows: **+0.077** on CV (95% CI +0.016…+0.142, wins 5/5 folds). With NEVER and UNKNOWN merged (removing SDOH-NLI's inconsistent NEVER labels) Flan still wins: **0.934 vs 0.878** (+0.057, CI +0.012…+0.104). Locked test: 0.877 vs 0.616, but that gap rests on 15 smoking-labelled premises (2 NEVER items carry ~64% of it), and validation showed no clear difference (0.846 vs 0.831) — treat the test gap as direction, not size.
 
-#### Full pipeline with the one-year rule (Wright synthetic, 600 **dev** notes — reused across experiments, not a held-out test)
+#### Full pipeline with the one-year rule (Wright synthetic notes)
 
-| Pipeline | One-year macro-F1 | Status accuracy | CURRENT R / P |
-|---|:-:|:-:|:-:|
-| Flan-T5-base + quit-date reader | 0.972 | 599 / 600 | 1.00 / 1.00 |
-| TF-IDF + quit-date reader | 0.973 | 600 / 600 | 1.00 / 1.00 |
-| TF-IDF learning the one-year labels directly | 0.888 | — | 0.92 / 1.00 |
+| Pipeline | Dev (600, reused) | **Locked test (600, opened once)** | CURRENT R / P (test) | Status accuracy (test) |
+|---|:-:|:-:|:-:|:-:|
+| Flan-T5-base + quit-date reader | 0.972 | **0.965** | 0.994 / 0.994 | 599 / 600 |
+| TF-IDF + quit-date reader | 0.973 | **0.967** | 0.994 / 1.000 | 599 / 600 |
+| TF-IDF learning the one-year labels directly | 0.888 | — | — | — |
 
 #### Cost on CPU (assumed $0.17/h for 4 vCPU)
 
@@ -174,6 +174,7 @@ Flan-T5-base vs TF-IDF on the same rows: **+0.077** on CV (95% CI +0.016…+0.14
 | Audit | Independent adversarial review | No leakage; 6 wording corrections applied (fair baseline 0.791; test gap fragile) |
 | H13 | Cascade for cost | 97% of the gain at ~40% of the cost (exploratory) |
 | H14 | Is bigger better? Flan-T5-large (780M) | No: 0.813 vs base 0.868 at this data size |
+| H15 | Locked Wright test, final pipelines | Confirmed: 0.965 (Flan) / 0.967 (TF-IDF), CURRENT recall 0.994 |
 
 Write-ups: [`experiments/*/analysis.md`](experiments) · leaderboard: [`experiments/sdoh-cv-leaderboard.json`](experiments/sdoh-cv-leaderboard.json) · E-wave-1: [`docs/results/e-wave-1-results-2026-10-29.md`](docs/results/e-wave-1-results-2026-10-29.md)
 
@@ -352,7 +353,7 @@ finetune/
 - [x] Quit-date reader + note date for the one-year rule (H5)
 - [x] Pretrained models without the HF Hub: SciBERT (scispaCy/S3), Flan-T5 (GCS)
 - [x] Fine-tune Flan-T5-large (780M) — no, base (250M) is better at this data size (H14)
-- [ ] Open the locked Wright test split once for the final pipelines (H15, running)
+- [x] Open the locked Wright test split once for the final pipelines (H15: 0.965 / 0.967)
 - [ ] SciBERT with a small-data recipe (H8b, locked, deferred)
 - [ ] Validate on i2b2-2006 once the DUA is signed
 

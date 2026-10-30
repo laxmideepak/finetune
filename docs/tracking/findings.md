@@ -18,6 +18,8 @@ What is the smallest, most accurate, most economical open-source model and train
 
 ## Key Results
 
+- **H15 (2026-10-30) — held-out confirmation on synthetic notes.** On the never-scored Wright test split (600 notes), the Flan-T5-base pipeline scores **0.965** one-year macro-F1 and the TF-IDF pipeline 0.967 (CURRENT recall 0.994 both; 599/600 status). Dev→test drop is small (0.972→0.965). Combined with H12, Flan-T5-base is better on human-written text and equal on synthetic notes.
+
 - **H14 (2026-10-30) — bigger is not better at this data size.** Fine-tuned Flan-T5-large (780M) scores 0.813 pooled CV vs 0.868 for Flan-T5-base (Δ −0.054 [−0.105, +0.001]); a same-optimizer base control (0.854) shows the size, not the optimizer, explains the gap. Flan-T5-base (250M) remains the best and lightest choice.
 
 - **Audit (2026-10-30) — corrections to the H9/H12 claims.** Like-for-like TF-IDF (same training rows) is 0.791, so Flan-T5-base's CV gain is **+0.077 [+0.016, +0.142]** (not +0.090). The locked-test gap (0.877 vs 0.616) rests on 15 smoking-labelled premises with ~64% from 2 NEVER items; validation shows no clear difference — direction, not size. Merging NEVER+UNKNOWN (3-class) Flan still wins 0.934 vs 0.878 (+0.057 [+0.012, +0.104]). SDOH-NLI numbers are native status (no one-year rule); the Wright 0.972 is a reused dev split; the cascade is exploratory. No leakage found.
