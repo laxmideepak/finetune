@@ -1,0 +1,55 @@
+{
+ "tfidf": 0.7913349062619704,
+ "flan": 0.8677927237171571,
+ "rows": [
+  {
+   "flan_call_share": 0.0,
+   "pooled_macro_f1": 0.7913,
+   "NEVER_f1": 0.545,
+   "share_of_flan_gain": 0.0,
+   "usd_per_million_sentences": 0.04
+  },
+  {
+   "flan_call_share": 0.1,
+   "pooled_macro_f1": 0.8196,
+   "NEVER_f1": 0.588,
+   "share_of_flan_gain": 0.37,
+   "usd_per_million_sentences": 0.55
+  },
+  {
+   "flan_call_share": 0.2,
+   "pooled_macro_f1": 0.8402,
+   "NEVER_f1": 0.615,
+   "share_of_flan_gain": 0.638,
+   "usd_per_million_sentences": 1.06
+  },
+  {
+   "flan_call_share": 0.3,
+   "pooled_macro_f1": 0.8576,
+   "NEVER_f1": 0.667,
+   "share_of_flan_gain": 0.867,
+   "usd_per_million_sentences": 1.56
+  },
+  {
+   "flan_call_share": 0.4,
+   "pooled_macro_f1": 0.8653,
+   "NEVER_f1": 0.7,
+   "share_of_flan_gain": 0.968,
+   "usd_per_million_sentences": 2.07
+  },
+  {
+   "flan_call_share": 0.5,
+   "pooled_macro_f1": 0.8628,
+   "NEVER_f1": 0.683,
+   "share_of_flan_gain": 0.935,
+   "usd_per_million_sentences": 2.58
+  },
+  {
+   "flan_call_share": 1.0,
+   "pooled_macro_f1": 0.8678,
+   "NEVER_f1": 0.682,
+   "share_of_flan_gain": 1.0,
+   "usd_per_million_sentences": 5.12
+  }
+ ]
+}
