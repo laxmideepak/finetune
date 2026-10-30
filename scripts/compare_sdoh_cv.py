@@ -42,7 +42,7 @@ def collect(n: int) -> dict[str, np.ndarray]:
             d = json.loads(Path(f).read_text())
             if "enc-S" in d["arms"]:
                 put(f"SciBERT 20ep ({Path(seed_dir).name})", d["test_ids"], d["arms"]["enc-S"]["pred"])
-    for f in sorted(glob.glob("experiments/h9-flan-t5/results/*_ft-S_fold*.json")) + sorted(glob.glob("experiments/h14-flan-large-ft/results/*_ft-S_fold*.json")):
+    for f in sorted(glob.glob("experiments/h9-flan-t5/results/*_ft-S_fold*.json")) + sorted(glob.glob("experiments/h14-flan-large-ft/results/*_ft-S_fold*.json")) + sorted(glob.glob("experiments/h17-wider-field/results/*_ft-S_fold*.json")):
         d = json.loads(Path(f).read_text())
         put(f"Flan-T5-{d['model']} fine-tuned", folds[d["fold"]], d["pred"])
     return arms, folds

@@ -63,7 +63,40 @@ def download(prefix: str, cache: Path) -> Path:
 
     with cf.ThreadPoolExecutor(8) as pool:
         list(pool.map(fetch, names))
+    index = cache / "checkpoint"
+    if not index.exists():  # small parameters (norms, position biases) may live inline here
+        index.write_bytes(_get(f"{BUCKET}/t5-data/{prefix}/checkpoint"))
     return cache
+
+
+def inline_params(cache: Path) -> dict:
+    """Arrays stored inline in the T5X msgpack index (some checkpoints keep norms/relpos there)."""
+    import msgpack
+    import numpy as np
+
+    index = cache / "checkpoint"
+    if not index.exists():
+        return {}
+
+    def hook(code, data):
+        if code == 1:
+            shape, dtype, buf = msgpack.unpackb(data, raw=False)
+            return np.frombuffer(buf, dtype=dtype).reshape(shape)
+        return msgpack.ExtType(code, data)
+
+    tree = msgpack.unpackb(index.read_bytes(), ext_hook=hook, raw=False, strict_map_key=False)
+    target = tree.get("target") or tree.get("optimizer", {}).get("target", {})
+    out = {}
+
+    def walk(node, path):
+        if isinstance(node, dict):
+            for k, v in node.items():
+                walk(v, f"{path}.{k}" if path else k)
+        elif isinstance(node, np.ndarray):
+            out[path] = node
+
+    walk(target, "")
+    return out
 
 
 class LazyParams(dict):
@@ -72,14 +105,24 @@ class LazyParams(dict):
     def __init__(self, cache: Path):
         super().__init__()
         self._dirs = {p.name[len("target.") :]: p for p in cache.iterdir() if p.is_dir() and p.name.startswith("target.")}
+        self._inline = inline_params(cache)
 
     def __getitem__(self, key):
         import zarr
 
-        return zarr.open(str(self._dirs[key]), mode="r")[...]
+        if key in self._dirs:
+            return zarr.open(str(self._dirs[key]), mode="r")[...]
+        return self._inline[key]
 
     def __contains__(self, key):
-        return key in self._dirs
+        return key in self._dirs or key in self._inline
+
+    def shape(self, key):
+        import zarr
+
+        if key in self._dirs:
+            return zarr.open(str(self._dirs[key]), mode="r").shape
+        return self._inline[key].shape
 
 
 def read_params(cache: Path) -> LazyParams:
@@ -138,10 +181,8 @@ def find_checkpoint(model_prefix: str) -> str:
 
 
 def infer_dims(cache: Path) -> dict:
-    """Read T5 v1.1 dimensions from the zarr array shapes."""
-    import zarr
-
-    shape = lambda name: zarr.open(str(cache / f"target.{name}"), mode="r").shape  # noqa: E731
+    """Read T5 v1.1 dimensions from the array shapes (zarr folders or inline index arrays)."""
+    shape = LazyParams(cache).shape
     n_enc = len([p for p in cache.iterdir() if p.name.startswith("target.encoder.layers_") and p.name.endswith(".attention.query.kernel")])
     n_dec = len([p for p in cache.iterdir() if p.name.startswith("target.decoder.layers_") and p.name.endswith(".self_attention.query.kernel")])
     d_model, inner = shape("encoder.layers_0.attention.query.kernel")
@@ -169,10 +210,11 @@ def main(argv: list[str] | None = None) -> int:
     cache = Path(args.cache) if args.cache else out.with_name(out.name + "-t5x")
     params = read_params(download(prefix, cache))
     dims = dims or infer_dims(cache)
+    params = read_params(cache)
     print("dims", dims)
     import zarr
 
-    vocab = zarr.open(str(cache / "target.token_embedder.embedding"), mode="r").shape[0]
+    vocab = params.shape("token_embedder.embedding")[0]
     config = T5Config(vocab_size=vocab, feed_forward_proj="gated-gelu", tie_word_embeddings=False,
                       dropout_rate=0.1, relative_attention_num_buckets=32, relative_attention_max_distance=128,
                       decoder_start_token_id=0, pad_token_id=0, eos_token_id=1, **dims)
