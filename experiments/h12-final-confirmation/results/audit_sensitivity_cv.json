@@ -1,0 +1,22 @@
+{
+ "4-class": {
+  "flan": 0.8678,
+  "tfidf_like_for_like": 0.7913,
+  "delta": 0.0765,
+  "ci95": [
+   0.0162,
+   0.1418
+  ],
+  "p_le_0": 0.0064
+ },
+ "3-class (NEVER+UNKNOWN merged)": {
+  "flan": 0.9344,
+  "tfidf_like_for_like": 0.8775,
+  "delta": 0.0569,
+  "ci95": [
+   0.0118,
+   0.1043
+  ],
+  "p_le_0": 0.0064
+ }
+}

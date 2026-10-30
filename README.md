@@ -106,7 +106,7 @@ Stage contracts, boundary tests B1–B11 and risks R1–R7 → **[`docs/design/p
 ## 🏆 Recommended model (2026-10-30)
 
 > [!TIP]
-> **Fine-tuned Flan-T5-base (250M) on evidence sentences**, behind a TF-IDF confidence cascade, with a rule-based quit-date reader for the one-year rule. Trains in minutes on a CPU; no GPU used.
+> **Fine-tuned Flan-T5-base (250M) on evidence sentences**, with a rule-based quit-date reader for the one-year rule. Trains in minutes on a CPU; no GPU used. A TF-IDF → Flan cascade cuts cost (exploratory; see below). Claims below were independently audited ([`experiments/audit-2026-10-30`](experiments/audit-2026-10-30/analysis.md)).
 
 ```mermaid
 flowchart LR
@@ -116,24 +116,25 @@ flowchart LR
     T -->|"low margin (40%)"| F["Flan-T5-base fine-tuned<br/>(hard 40%)"]
     T --> Q
     F --> Q["Quit-date reader<br/>+ one-year rule"]
+    linkStyle 3 stroke-dasharray: 4 4
     Q --> L["CURRENT · FORMER · NEVER · UNKNOWN<br/>+ evidence + reason"]
 ```
 
-#### Human-written text (SDOH-NLI, openly licensed MTSamples sentences)
+#### Status classifier on human-written text (SDOH-NLI, openly licensed MTSamples sentences; native labels, no one-year rule)
 
 | Model | 5-fold CV (pooled) | Locked test (opened once) | NEVER F1 (CV) |
 |---|:-:|:-:|:-:|
 | 🥇 **Flan-T5-base, fine-tuned** | **0.868** | **0.877** | **0.68** |
 | Cascade: TF-IDF → Flan on 40% | 0.865 | — | 0.70 |
 | Flan-T5-small, fine-tuned | 0.795 | — | 0.49 |
-| TF-IDF word+char SVM | 0.779 | 0.616 | 0.49 |
+| TF-IDF word+char SVM (same training rows as Flan) | 0.791 | 0.616 | 0.55 |
 | Flan-T5-large, zero-shot + policy guard | 0.750 | — | 0.48 |
 | SciBERT, generic fine-tune | 0.682 | — | 0.10 |
 | Trained on synthetic notes only | 0.599 | — | 0.24 |
 
-Flan-T5-base vs TF-IDF: **+0.090** on CV (95% CI +0.030…+0.151, wins 5/5 folds) and **+0.261** on the locked test (CI +0.024…+0.470); test CURRENT recall/precision **1.00 / 1.00**.
+Flan-T5-base vs TF-IDF on the same rows: **+0.077** on CV (95% CI +0.016…+0.142, wins 5/5 folds). With NEVER and UNKNOWN merged (removing SDOH-NLI's inconsistent NEVER labels) Flan still wins: **0.934 vs 0.878** (+0.057, CI +0.012…+0.104). Locked test: 0.877 vs 0.616, but that gap rests on 15 smoking-labelled premises (2 NEVER items carry ~64% of it), and validation showed no clear difference (0.846 vs 0.831) — treat the test gap as direction, not size.
 
-#### Synthetic notes with the one-year rule (Wright, 600 dev notes)
+#### Full pipeline with the one-year rule (Wright synthetic, 600 **dev** notes — reused across experiments, not a held-out test)
 
 | Pipeline | One-year macro-F1 | Status accuracy | CURRENT R / P |
 |---|:-:|:-:|:-:|
@@ -146,7 +147,7 @@ Flan-T5-base vs TF-IDF: **+0.090** on CV (95% CI +0.030…+0.151, wins 5/5 folds
 | Setup | ≈ $ per million sentences |
 |---|:-:|
 | TF-IDF only | 0.04 |
-| **Cascade (Flan on 40%)** | **2.07** |
+| Cascade (Flan on 40%) — *exploratory, operating point chosen on CV* | 2.07 |
 | Flan-T5-base on everything | 5.08 |
 | Published cloud-LLM full-note costs | 120 – 6,610 per million notes |
 
@@ -168,7 +169,8 @@ Flan-T5-base vs TF-IDF: **+0.090** on CV (95% CI +0.030…+0.151, wins 5/5 folds
 | H9 | Flan-T5 zero-shot / fine-tuned | Fine-tuned base wins (0.868) |
 | H10 | Zero-shot + policy guard | Refuted (0.750) |
 | H11 | 3-model vote | Refuted (0.840 < best single) |
-| H12 | Locked-test confirmation | Confirmed (0.877 vs 0.616; Wright 0.972) |
+| H12 | Locked-test confirmation | Confirmed in direction (SDOH test 0.877 vs 0.616 on 15 smoking items; Wright **dev** 0.972) |
+| Audit | Independent adversarial review | No leakage; 6 wording corrections applied (fair baseline 0.791; test gap fragile) |
 | H13 | Cascade for cost | 97% of the gain at ~40% of the cost (exploratory) |
 
 Write-ups: [`experiments/*/analysis.md`](experiments) · leaderboard: [`experiments/sdoh-cv-leaderboard.json`](experiments/sdoh-cv-leaderboard.json) · E-wave-1: [`docs/results/e-wave-1-results-2026-10-29.md`](docs/results/e-wave-1-results-2026-10-29.md)

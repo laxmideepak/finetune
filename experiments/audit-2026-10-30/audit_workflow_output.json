@@ -1,0 +1,533 @@
+{
+  "summary": "Adversarial audit of the headline smoking-status results (leakage, comparison bugs, label mapping, claim accuracy)",
+  "agentCount": 10,
+  "logs": [],
+  "result": [
+    {
+      "angle": "leakage",
+      "ok": [
+        "SDOH-NLI raw (un-normalised) premise strings: 0 exact overlaps between train and validation/test; no within-split normalised duplicates in validation or test.",
+        "No normalised twin across splits or folds has a conflicting label (0 mismatches).",
+        "CV folds: 0 non-UNKNOWN fold-test premises have an exact normalised twin in the fold-train; only 1/113 non-UNKNOWN evidence sentences has a >=0.9 char-cosine near-twin.",
+        "CV fold construction is identical across run_h8_encoder_cv.py, run_h9_flan_cv.py and compare_sdoh_cv.py: same load_sdoh('train') + add_evidence + reset_index + StratifiedKFold(5, shuffle=True, random_state=0). compare_sdoh_cv maps Flan fold predictions via the H8 test_ids.",
+        "H12 trains Flan and TF-IDF on SDOH train only (no validation/test rows), then scores validation and test; test is gated behind --confirm-locked-test.",
+        "Wright assign_splits: 3000 rows, 3000 unique patient_ids, 0 patients in more than one split; 600/200/200 per condition; deterministic (SPLIT_SEED=20261029).",
+        "Wright conditions use distinct ID spaces (PT/MS/MC). Matching on (age, sex, note_date, status, pack_years, quit_date): messy-complex has 0 shared-fact rows and basic-messy has 1 (coincidental), so no cross-condition patient twins span splits.",
+        "Wright: 0 duplicate full notes. Evidence-sentence exact overlap with train is dev 17/570 and test 28/574, almost all template-rendered 'basic' sentences. Long (>=12-word) sentences shared with train: dev 137/7055 and test 123/7188, of which smoking-bearing are only 5/1564 and 7/1649. Copy-forward text does not cross splits in any meaningful amount.",
+        "H12 Wright stage trains on Wright train + SDOH train evidence and evaluates on Wright dev; Wright test is not touched."
+      ],
+      "minor": [
+        {
+          "title": "Cross-split near-duplicate premises exist (about 7-8% of val/test), almost all UNKNOWN denial boilerplate; the only NEVER validation item has an exact train twin",
+          "severity": "minor",
+          "evidence": "Raw exact premise overlap between train and val/test is 0. After lowercasing and stripping punctuation and whitespace: validation 9/109 (UNKNOWN 8, NEVER 1: 'No history of any smoking, alcohol, or drug abuse') and test 8/108 (UNKNOWN 7, CURRENT 1). Char-ngram cosine >=0.9 to a train premise: validation 13 and test 10, all UNKNOWN; >=0.8: validation 24 (incl. 1 CURRENT, 1 NEVER) and test 23 (all UNKNOWN). The twins are gender-swapped or punctuation variants, e.g. test 'He does not smoke' ~ train 'She does not smoke'. Validation has NEVER n=1, and that item is an exact twin. So the validation NEVER-class F1 (and the validation 0.846 vs 0.831) partly measures recall of a training sentence.",
+          "impact_on_claims": "This has little effect on the test claim: UNKNOWN F1 is about 0.98 for both arms. The validation macro-F1 is less reliable, because one of its four class F1s is decided by one memorisable item.",
+          "suggested_fix": "Deduplicate on the normalised premise, and optionally on near-duplicates after a he/she swap, before splitting or scoring. Report validation/test metrics with and without twins."
+        },
+        {
+          "title": "Within-train normalised duplicates leak across the 5 CV folds (14 fold-test items), all UNKNOWN",
+          "severity": "minor",
+          "evidence": "load_sdoh pivots on the raw premise string, so punctuation variants survive as separate rows. Train contains 10 normalised-duplicate pairs, e.g. 'She does not smoke' / 'She does not smoke.', 'She is a nonsmoker' / 'She is a nonsmoker.', 'No smoking or drinking' / '…drinking.'. Every pair has the same label (UNKNOWN). Under StratifiedKFold(5, shuffle=True, random_state=0), the fold-test items with an exact normalised twin in the fold-train are 1/3/1/4/5 for folds 0-4, and 0 of them are non-UNKNOWN. Evidence-sentence (evid0) exact twins per fold: 2/2/1/2/3. Evidence near-twins (cosine >=0.9) among non-UNKNOWN fold-test items: 1 of 113 pooled.",
+          "impact_on_claims": "The leakage is negligible for claim (a) (0.868 vs 0.779). It affects only UNKNOWN items, which both arms classify almost perfectly, and both arms share the same folds.",
+          "suggested_fix": "Group CV folds by normalised premise (GroupKFold / StratifiedGroupKFold) for hygiene."
+        },
+        {
+          "title": "The 'H12 locked-test confirmation' Wright number (0.972) is a repeatedly reused dev split; the Wright test split has never been scored",
+          "severity": "minor",
+          "evidence": "run_h12_final.run_wright scores wright[split=='dev'] (lines ~78-84). Wright dev was also scored in the E-wave, H5 (protocol: 'Dev notes are scored…', 'Test split stays locked'), H6 ('Dev is scored once per arm') and H9 (--wright-dev). README line 171 lists 'H12 | Locked-test confirmation | Confirmed (0.877 vs 0.616; Wright 0.972)'. README line ~136 does label the table '600 dev notes'. grep shows no script that selects split=='test' for Wright.",
+          "impact_on_claims": "Claim (c) is a dev-set number that was seen across about 5 experiments. It is not a held-out confirmation, so the summary row in README.md overstates it. The impact is limited because Wright is saturated (600/600 status).",
+          "suggested_fix": "Relabel the README H12 row as 'Wright dev', or open the locked Wright test split once for the final pipeline."
+        },
+        {
+          "title": "Near-duplicate NEVER/UNKNOWN pairs with conflicting gold reveal annotation-driven label boundary (not leakage, but limits memorisation and the NEVER metric)",
+          "severity": "minor",
+          "evidence": "Under sdoh_label, 'nonsmoker' premises without a 'wasn't a smoker in the past' annotation map to UNKNOWN (denial-only). Train 'He is nonsmoker, nondrinker' is UNKNOWN while test 'She is a lifetime nonsmoker, nondrinker' is NEVER. Test 'He is a nonsmoker.' / 'He does not smoke' are UNKNOWN, matching their train twins.",
+          "impact_on_claims": "The NEVER class (2 test items) hinges on subtle wording ('lifetime', 'any smoking history'), and its F1 swings the 4-class macro-F1 by about 0.17 per item.",
+          "suggested_fix": "Report the NEVER-vs-UNKNOWN confusion explicitly, and consider a 3-class (CURRENT/FORMER/other) sensitivity metric."
+        }
+      ],
+      "verified": [
+        {
+          "angle": "leakage",
+          "title": "Locked SDOH-NLI test gap (0.877 vs 0.616) rests on 15 smoking-labelled premises; it is not explained by memorisation, but by 5 FORMER/NEVER items",
+          "severity": "major",
+          "evidence": "Script /tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/leak.py (venv-lite, uses run_h7_ood.load_sdoh + add_evidence). After load_sdoh the splits are train 570, validation 109 and test 108 premises. Test labels are UNKNOWN 93, CURRENT 10, FORMER 3, NEVER 2. Exact normalised-premise twins of test items in train: 8 (7 UNKNOWN, 1 CURRENT: 'The patient is a smoker' ~ train 'The patient is a smoker.'). No twin's label disagrees. The script leak2.py found the nearest train evidence sentence (char_wb 3-5 TF-IDF cosine) for every non-UNKNOWN test item. Apart from the one CURRENT twin, all similarities are between 0.24 and 0.76. Both NEVER test items have UNKNOWN nearest neighbours in train ('She is a lifetime nonsmoker, nondrinker' 0.75 ~ UNKNOWN 'He is nonsmoker, nondrinker'; 'He denied any smoking history' 0.56 ~ UNKNOWN denial). So a near-duplicate pulls these toward the wrong label rather than leaking the right one. h12_sdoh.json per-class F1: Flan CURRENT 1.0 / FORMER 0.857 / NEVER 0.667 / UNKNOWN 0.984; TF-IDF 0.818 / 0.667 / 0.0 / 0.978. The +0.26 delta therefore comes mostly from NEVER (n=2) and FORMER (n=3). No per-item test predictions were saved (h12_sdoh.json keys: sdoh_validation, sdoh_test, efficiency, note), so the gap cannot be traced item by item.",
+          "impact_on_claims": "The leakage angle does not inflate claim (b). The one leaked smoking item is CURRENT, and both arms see it in training. Still, the effect size is driven by about 5 items, so '0.877 vs 0.616' should be reported as fragile (CI +0.024…+0.470, as findings.md partly admits). It is not a measure of the size of the real gap.",
+          "suggested_fix": "Save per-item test predictions in h12_sdoh.json. Report the test result as an item-level contingency over the 15 smoking-labelled premises rather than leading with macro-F1. Add a deduplicated-test sensitivity row (drop the 8 normalised twins).",
+          "verdict": {
+            "refuted": false,
+            "reasoning": "I reproduced every factual claim in the finding, and all of them hold. I re-ran the check with my own script, /tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/v_leak.py, using the venv-lite environment, run_h7_ood.load_sdoh and add_evidence.\n- **Split sizes:** load_sdoh gives train 570, validation 109 and test 108 premises.\n- **Test labels:** UNKNOWN 93, CURRENT 10, FORMER 3 and NEVER 2, so 15 test premises carry a smoking label.\n- **Twins:** 8 test premises match a train premise exactly after normalisation (7 UNKNOWN, 1 CURRENT). None of the 8 has a conflicting label. The only CURRENT twin is 'The patient is a smoker', which matches train 'The patient is a smoker.'.\n- **Nearest neighbours:** I used char_wb 3-5 TF-IDF cosine on the evidence sentences. Apart from that twin (0.82), the non-UNKNOWN test items score between 0.24 and 0.76 against their nearest train item. Both NEVER items have an UNKNOWN nearest neighbour: 0.75 for 'He is nonsmoker, nondrinker' and 0.56 for the tobacco/alcohol/drug denial. So these near-duplicates point toward the wrong label, not the right one.\n- **Both models see the same training data:** in scripts/run_h12_final.py, Flan is fine-tuned on s_train, and fit_predict(s_train, ev) trains TF-IDF on the same s_train. The leaked CURRENT item is therefore in training for both models and does not favour Flan.\n- **Per-class scores:** h12_sdoh.json matches the finding exactly.\n- **Where the gap comes from:** the per-class F1 gaps are CURRENT +0.182, FORMER +0.190, NEVER +0.667 and UNKNOWN +0.006. They sum to 1.045, and 1.045 / 4 = 0.261, the reported delta. NEVER and FORMER (5 items) contribute 0.857 of that 1.045, about 82%.\n- **No per-item record:** h12_sdoh.json has only the keys sdoh_validation, sdoh_test, efficiency and note, and the script never writes per-item predictions.\n- **Uncertainty:** the paired bootstrap CI is [0.024, 0.470], with p_le_0 = 0.0116.\n\nThe finding is accurate. It rules out leakage as a reason for the gap, and it shows that the gap is fragile because it depends on about 5 items.",
+            "reproduced_evidence": "Command: /home/user/venv-lite/bin/python /tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/v_leak.py, run from /home/user/finetune.\n\nOutput:\n```\ntrain 570 {'UNKNOWN': 457, 'CURRENT': 59, 'FORMER': 35, 'NEVER': 19}\nvalidation 109 {...}\ntest 108 {'UNKNOWN': 93, 'CURRENT': 10, 'FORMER': 3, 'NEVER': 2}\ntwins 8 {'UNKNOWN': 7, 'CURRENT': 1} disagree 0\n   CURRENT The patient is a smoker\nNEVER 0.56 'He denied any smoking history' -> UNKNOWN 'He denied any history of tobacco, alcohol, or illicit drug u...'\nNEVER 0.75 'She is a lifetime nonsmoker, nondrinker' -> UNKNOWN 'He is nonsmoker, nondrinker'\nFORMER 0.49 / 0.46 / 0.44 (the last one's nearest neighbour is CURRENT)\nCURRENT 0.24–0.76, plus the twin at 0.82\n```\n\nh12_sdoh.json, sdoh_test:\n- Flan per-class F1: CURRENT 1.0, FORMER 0.857, NEVER 0.667, UNKNOWN 0.984 (macro 0.8769)\n- TF-IDF per-class F1: 0.818, 0.667, 0.0, 0.978 (macro 0.6158)\n- Paired delta 0.261, CI [0.0243, 0.4696]\n- Top-level keys: ['sdoh_validation', 'sdoh_test', 'efficiency', 'note']; no per-item predictions are stored.\n\nIn run_h12_final.py, both models are trained on the train split only: finetune(train_rows...) for Flan and fit_predict(s_train, ev) for TF-IDF.",
+            "corrected_impact": "The finding holds as stated. Leakage does not inflate claim (b), the locked-test 0.877 vs 0.616. There are 8 exact train/test twins, none with conflicting labels. Only one twin carries a smoking label (CURRENT), and both models were trained on it. About 82% of the +0.261 macro-F1 delta comes from the NEVER (n=2) and FORMER (n=3) classes. A 95% CI of 0.02 to 0.47 means the effect is real in direction but its size is poorly pinned down. It should be reported as fragile and given alongside an item-level breakdown of the 15 smoking-labelled premises. No per-item predictions were saved, so the gap cannot be traced item by item without re-running the scoring."
+          }
+        }
+      ]
+    },
+    {
+      "angle": "comparison",
+      "ok": [
+        "Recomputed the pooled macro-F1 from the raw JSON (sklearn f1_score and src.metrics). TF-IDF (S) = 0.7787 with per-class C/F/N/U 0.847/0.812/0.486/0.969. Flan-T5-base fine-tuned = 0.8678 with 0.885/0.930/0.682/0.975. Both match experiments/sdoh-cv-leaderboard.json and the 0.779 / 0.868 claims.",
+        "The paired bootstrap reproduces exactly: Δ mean 0.09, CI [0.0299, 0.1511], p≤0 0.0012 with seed 20261030 and 5000 resamples. It resamples premises with replacement, applies the same index set to both arms and recomputes the full macro-F1 each time, so it is correctly paired.",
+        "H9 alignment is correct. The H9 fold files store pred in te order; sklearn StratifiedKFold returns te sorted ascending, and H8 test_ids equal te exactly for all 5 folds. The H9 fold macro_f1 values stored at write time match my recomputation from the current folds to 4 dp (0.7936, 0.9394, 0.8546, 0.8671, 0.9012). Reversing the order of fold-0 preds drops F1 to 0.193, so this check is sensitive to misalignment.",
+        "Folds are identical across H8, H9, H13, compare_sdoh_cv and H14. All use add_evidence(load_sdoh(train)).reset_index(drop=True) with StratifiedKFold(5, shuffle=True, random_state=0) on y. load_sdoh orders rows deterministically via a pivot_table sorted by premise. H8b test_ids also match H8.",
+        "No train/test overlap within CV: the folds are disjoint and cover all 570 premises exactly once. Only 2 test-fold evidence sentences have an identical copy in train, and that sentence is 'Denied ETOH/Tobacco/illicit drug use.', labelled UNKNOWN both times.",
+        "No premise or evidence-sentence overlap among the SDOH-NLI train/validation/test splits (all 0). H12 trains on train only and evaluates on validation and test.",
+        "The stored tfidf-S preds are reproduced exactly by refitting fit_predict in each fold (agreement 1.0).",
+        "The zero-shot preds (small, base, large) are full-length (570) and in sdoh order; their stored per-fold macro-F1 matches recomputation exactly.",
+        "All 328 empty-evidence premises are labelled UNKNOWN, and every arm predicts UNKNOWN for them. Both arms get this shared floor, so it is not an unfair advantage either way.",
+        "The H9 hyperparameters (3 epochs, lr 3e-4, AdamW, batch 16, oversampling, seed 42) were pre-registered in experiments/h9-flan-t5/protocol.md (commit ee72b6a) before results. The later script change (47d63ad) only added an optimizer option with AdamW as the default.",
+        "The H13 cascade uses H9 out-of-fold Flan preds aligned by folds[d['fold']][1], and SVM margins come from within-fold models. Routing uses no labels, and the reported 0.7913 / 0.8678 endpoints are consistent with my recomputation.",
+        "H11 vote logic implements the stated rule (majority, else the Flan-base label). It is computed on aligned arrays."
+      ],
+      "minor": [
+        {
+          "title": "The leaderboard JSON is stale: no H8b SciBERT arms or H14 base-Adafactor arm, and the Adafactor rerun of the same Flan-T5-base pools to 0.854, not 0.868",
+          "severity": "minor",
+          "evidence": "experiments/sdoh-cv-leaderboard.json was last committed in 4e40887 at 02:56. It has no 'SciBERT 20ep (seed*)' or 'Flan-T5-base-ada fine-tuned' rows, though compare_sdoh_cv.py would add them. experiments/h14-flan-large-ft/results/base-ada_ft-S_fold{0..4}.json are complete; pooling them through the H8 test_ids gives 'base-ada pooled 0.854 agree with adamw base 0.968'. The H8b seed42 folds are incomplete (no enc-S in every fold), so those rows would show as incomplete. H9 is a single seed and its fold macro-F1 ranges from 0.794 to 0.939.",
+          "impact_on_claims": "0.868 is one seed and one optimizer. A near-identical recipe gives 0.854, so roughly ±0.01 of the headline is run-to-run variance. The bootstrap CI covers only test-sample variance, not training variance.",
+          "suggested_fix": "Re-run compare_sdoh_cv.py once H14 finishes. Report the seed/optimizer spread (0.854 to 0.868), or average several seeds, before quoting 0.868 as a point estimate."
+        },
+        {
+          "title": "Latent bug in run_h8_encoder_cv.py: rewrites test_ids and y_true on every resume while keeping cached arm predictions",
+          "severity": "minor",
+          "evidence": "In main(), the existing fold file is loaded, then record['test_ids'] and record['y_true'] are overwritten from the current split, and arms already present are skipped ('if arm in record[\"arms\"]: continue'). If data order or filtering ever changed between runs, the old predictions would be silently tagged with the new indices. compare_sdoh_cv.py then uses these H8 test_ids to place every H9, H14 and H8b prediction. I checked that this has not happened: current folds equal the stored test_ids, and refitting TF-IDF reproduces the stored tfidf-S preds with 1.0 agreement in all 5 folds. Because y_true is also rewritten, it cannot serve as an independent check.",
+          "impact_on_claims": "None today. I verified the current files are consistent.",
+          "suggested_fix": "Assert that the stored test_ids equal the current te before reusing cached arms. Store test_ids (or a data hash) in the H9/H14 fold files too, and have compare_sdoh_cv.py assert alignment instead of borrowing H8's indices."
+        },
+        {
+          "title": "Process note: the H12 protocol was committed in the same commit as the last Flan-base CV fold, and the H13 operating point (40%) was picked after seeing the curve",
+          "severity": "minor",
+          "evidence": "`git log -- experiments/h9-flan-t5/results/base_ft-S_fold4.json` shows the file added in 7ed2b4b 'research(protocol): H12-FINAL confirm fine-tuned Flan-T5-base...' at 02:56:12. Folds 0-3 were committed in 38b0022 at 02:51. The prediction in experiments/h13-cascade/analysis.md was b=30%; the 'recommended operating point' of 40% (97% of gain) was chosen on the same CV data.",
+          "impact_on_claims": "H13's 40% / 97% figure is optimistic, which the analysis partly concedes by labelling H13 exploratory. Choosing Flan for H12 before fold 4 was committed is not a correctness error.",
+          "suggested_fix": "Quote the pre-registered b=30% (87% of gain) as the H13 result and present 40% as a post-hoc choice."
+        }
+      ],
+      "verified": [
+        {
+          "angle": "comparison",
+          "title": "Headline TF-IDF baseline (0.779) is trained on a different row set than the Flan-T5 arm it is compared against; the like-for-like TF-IDF scores 0.791 and the gap shrinks from +0.090 to +0.078",
+          "severity": "major",
+          "evidence": "scripts/run_h8_encoder_cv.py tfidf-S calls run_h7_ood.fit_predict(a, b). That function trains on every train-fold row and replaces empty evidence with '__no_evidence__': 328 of 570 premises have empty evid0, and all of them are labelled UNKNOWN. scripts/run_h9_flan_cv.py ft-S trains Flan only on rows with evidence (a = a[a['evid0'].str.len() > 0]). Both arms predict UNKNOWN for empty rows at test time. I refit TF-IDF with the Flan-style filter, in the same folds with the same _model('svm'), in /tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/boot.py. Output: 'tfidf evidence-only 0.7913 agree w H8 0.991'. Paired bootstrap with the same seed 20261030 and 5000 resamples: 'flan vs tfidf(H8) (0.09, [0.0299, 0.1511], 0.0012)' and 'flan vs tfidf(evidence-only) (0.0778, [0.0162, 0.1418], 0.0064)'. Per-fold deltas against the evidence-only TF-IDF: 0.028, 0.098, 0.097, 0.151, 0.047. experiments/h13-cascade/analysis.md already reports TF-IDF at 0.791 for this reason, but README/findings still quote 0.779 and Δ +0.090.",
+          "impact_on_claims": "Claim (a) holds in direction: Flan still wins 5/5 folds and the CI excludes 0. The size of the gain is overstated by about 0.012 because the comparator is the weaker of two TF-IDF variants in the repo. The H13 'share of Flan gain' uses the 0.791 baseline, so it is not on the same scale as the leaderboard delta.",
+          "suggested_fix": "Fit both arms on the same row set (filter empty-evidence rows in fit_predict for CV too, or train Flan on the same rows), or report TF-IDF as 0.791 with Δ +0.078 [+0.016, +0.142]. State one TF-IDF definition across H8, H12 and H13.",
+          "verdict": {
+            "refuted": false,
+            "reasoning": "I could not refute the finding; it reproduces exactly. In the code, scripts/run_h8_encoder_cv.py arm tfidf-S calls run_h7_ood.fit_predict(a, b). That function fits the SVM on every train-fold row and turns empty evid0 into the token '__no_evidence__'. scripts/run_h9_flan_cv.py ft-S filters to a[a['evid0'].str.len() > 0] before fine-tuning. So the two arms are trained on different row sets. At test time both arms force UNKNOWN on empty-evidence rows. I wrote my own script that does not use the auditor's .npy files. It loads the stored per-fold predictions from the H8 and H9 result JSONs, checks the test_ids against StratifiedKFold(5, shuffle, rs=0), refits the H8 TF-IDF, and fits an evidence-only TF-IDF with the same _model('svm'). The stored H8 TF-IDF reproduces bit-for-bit at 0.7787. The evidence-only TF-IDF scores 0.7913, which matches the 0.791 that h13-cascade/analysis.md already uses. The paired bootstrap numbers match the auditor's to four decimals. Flan still wins all 5 folds against the like-for-like baseline and the CI excludes 0, so the direction of claim (a) holds. The gap is overstated by about 0.012. README.md line 129 and docs/tracking/findings.md line 21 quote TF-IDF 0.779 and Δ +0.090. H13 uses 0.791, so the repo has two TF-IDF definitions that are not on the same scale.",
+            "reproduced_evidence": "Script: /tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/v/chk.py, run with /home/user/venv-lite/bin/python from /home/user/finetune. It uses the stored predictions in experiments/h8-pretrained-encoder-cpu/results/fold{k}.json (tfidf-S) and experiments/h9-flan-t5/results/base_ft-S_fold{k}.json, and asserts the test_ids match the folds. Output:\nn 570 empty 328 {'UNKNOWN': 328}\nstored tfidf 0.7787 refit H8 tfidf 0.7787 agree 1.0 flan 0.8678 evid-only tfidf 0.7913 agree 0.9912\npreds on empty: flan {'UNKNOWN'} tf {'UNKNOWN'}\nflan-tfH8 (0.09, [0.0299, 0.1511], 0.0012)\nflan-tfEvid (0.0778, [0.0162, 0.1418], 0.0064)\nper-fold Flan minus evidence-only TF-IDF: 0.028, 0.098, 0.097, 0.151, 0.047\nCode: run_h7_ood.py:74-80. fit_predict trains on _fill(train.evid0), with '__no_evidence__' for empty rows. run_h9_flan_cv.py:198 filters train to rows with evid0 length > 0. README.md:129 and findings.md:21 quote 0.779 and Δ +0.090. h13-cascade/analysis.md:16 says TF-IDF is 0.791 because it is trained on evidence-only rows.",
+            "corrected_impact": "The finding holds as stated. Claim (a) still holds in direction. Against a TF-IDF trained on the same rows, Flan-T5-base scores 0.868 vs 0.791, Δ +0.078 [+0.016, +0.142], p≈0.006, and wins 5/5 folds. The headline Δ +0.090 overstates the gain by about 0.012, and the lower CI bound falls from +0.030 to +0.016. The headline also uses a different TF-IDF definition from H13's 0.791, so the leaderboard delta and H13's 'share of Flan gain' are not on the same scale. Severity is moderate: the effect size is overstated and the baseline is defined inconsistently, but the conclusion does not change."
+          }
+        }
+      ]
+    },
+    {
+      "angle": "labels",
+      "ok": [
+        "SDOH-NLI: every smoking premise in train/val/test has all 4 hypotheses (570/109/108), with no duplicate or conflicting (premise, hypothesis) rows, so pivot_table fillna(False) does not invent labels",
+        "sdoh_label covers all observed combos (0000, 0010, 0100, 0101, 0110, 1000, 1010, 1110) as the protocol table specifies; test label counts reproduce h12_sdoh.json (UNKNOWN 93, CURRENT 10, FORMER 3, NEVER 2 = 15 smoking-labelled)",
+        "No premise overlap between SDOH train and val/test; exact evidence-sentence overlap is 2/42 val and 1/40 test, all with the same label (denial-only UNKNOWN); no train evidence sentences with conflicting labels",
+        "Pooled CV per-class F1 recomputed from per-fold preds: Flan .885/.930/.682/.975 (macro 0.8678), TF-IDF .847/.812/.486/.969 (0.7787), matching 0.868/0.779 and the NEVER column in the README",
+        "label_policy.status_from_cessation: 365 days -> FORMER (inclusive), <365 -> CURRENT, None -> UNKNOWN timing-unresolved, negative -> error; matches the POLICY_TEXT canonical cases",
+        "Wright one_year_label (v1) counts reproduce research-log 13 (958 FORMER stay, 24 -> CURRENT, 189 -> UNKNOWN); no rows with cessation after the note date",
+        "v2 changes exactly 10 labels, all relative_years/years_ago UNKNOWN->FORMER, consistent with the '10/3,000' disclosure",
+        "apply_one_year_rule only re-examines FORMER, clamps negative intervals, and uses inclusive-boundary status_from_cessation on both ends of the interval",
+        "Oracle-status + full-note resolver on Wright dev gives macro-F1 0.981 vs v2 labels, consistent with the reported 0.971-0.981; the 9 disagreements are resolver misses (8) and one gold error (MC0895)",
+        "Resolver probes behave as policy expects for: quit 6 months ago -> CURRENT, quit 18 months ago -> FORMER, quit last year -> UNKNOWN, June 2024 at note 2025-06-15 -> UNKNOWN, ISO date 365 days -> FORMER / 364 days -> CURRENT, relapse 'quit again 3 months ago' -> CURRENT",
+        "The same labels, resolver and splits are used for both Flan and TF-IDF arms in H12 Wright and SDOH, so no label-mapping asymmetry favours one model"
+      ],
+      "minor": [
+        {
+          "title": "status_rules.NEVER (policy guard and rules baseline) treats 'nonsmoker'/'non-smoker' as lifetime never-use, which contradicts POLICY_TEXT and SDOH labels; precedence also turns cessation counselling into FORMER",
+          "severity": "minor",
+          "evidence": "src/status_rules.py NEVER includes 'non-?smoker'. POLICY_TEXT says NEVER requires explicit lifetime non-use, and denying current smoking does not establish it. Probe results: rule_status('He is a nonsmoker.') = NEVER; 'Non-smoker currently; smoked 20 years, quit 2010.' = NEVER; 'Never smoker. Quit date set for next month' = NEVER; 'Current smoker, 1 ppd, not ready to quit.' = FORMER; 'Smokes 1 ppd; counseled to quit.' = FORMER (FORMER is checked before CURRENT and matches 'quit'). On SDOH, the NEVER regex matches 16 train, 3 validation and 6 test premises that are gold UNKNOWN(denial-only), so run_h10_guard.guard cannot veto NEVER predictions on the most common confusion.",
+          "impact_on_claims": "Weakens H10 (zero-shot + guard 0.750) and the rules arm as fair tests of a 'policy guard'. It does not affect the Flan vs TF-IDF headline. The module docstring claim 'Built from the label policy's canonical cases' is not accurate.",
+          "suggested_fix": "Remove bare non-?smoker from NEVER, or require a lifetime qualifier ('lifelong/lifetime/never'). Add PLAN-style exclusions so 'ready to quit' / 'counseled to quit' do not trigger FORMER. Re-run the H10 guard as exploratory."
+        },
+        {
+          "title": "Wright one-year gold labels ignore the DOB written in the note: at least 9 notes labelled UNKNOWN(timing-unresolved) are determinably FORMER, including two exact-365-day cases that the policy explicitly rules FORMER",
+          "severity": "minor",
+          "evidence": "run_wright_smoke._bounds uses answers.csv quit_year_min/max (often ±1 year) for birthday/age-based sources. Computed from the note's DOB: MC0895 (dev) DOB 7/9/1959, note 2024-08-30, 'not smoked since her 63rd birthday' -> 783 days -> FORMER, gold UNKNOWN. MC0203 (train) 59th birthday -> exactly 365 days. MC0214 (test) 68th birthday 2024-10-30, note 2025-10-30 -> exactly 365 days. MC0335 (test) -> 2 years. MC0645 -> 2 years. MC0314 -> 442 days. MC0974 'quit at age 63', DOB 5/16/1958, note 2023-05-16 -> >=366 days. MS0540 'quit at age 65', note on 67th birthday -> FORMER. MS0777 'quit when I turned 72' -> 812 days. In the oracle-status full-note resolver check on dev (scratch a6.py, macro-F1 0.981), MC0895 is scored as a resolver error although the resolver's FORMER is correct.",
+          "impact_on_claims": "Both Wright pipelines (Flan 0.972, TF-IDF 0.973) share the resolver and labels, so the ranking is unaffected. On dev it is 1/600 items (about 0.001-0.003 macro-F1). The test split has 3 such mislabels. The boundary case 'exactly one year -> FORMER' is mislabelled in the gold.",
+          "suggested_fix": "Derive one-year gold for birthday/at-age sources from the DOB when the note states it, or exclude these from the timing-unresolved class. Document this as a label-derivation limitation."
+        },
+        {
+          "title": "Label deviation v2 adopts the resolver's own [N+1, N]-years convention after dev results (circular), and the docstring disagrees with the code",
+          "severity": "minor",
+          "evidence": "run_h5_date_resolver.one_year_label_v2 docstring says 'the stated N is used', but the code computes n = note_day.year - int(quit_date[:4]) from the answer key. For MC0898 the note says 'He quit smoking 1 year ago' / 'quit in 2021' at note 2023-01-19, and the code uses n=2. The same [N+1, N] convention is hard-coded in quit_resolver 'years-ago', so v2 gold cannot disagree with the resolver on these items. 10/3,000 labels flip UNKNOWN->FORMER (PT0314, PT0461, PT0674, PT0699, PT0915, MS0615, MS0684, MS0841, MS0869, MC0898); only MS0869 is in dev. Wright has no relative N=1 case and no day-precision quit within 330-400 days of the note, so the boundary convention is never tested. Probes show an inconsistency: 'Quit 1 year ago' and 'Quit about a year ago' -> FORMER, 'Quit 12 months ago' -> UNKNOWN, 'Years since quitting: 1' -> UNKNOWN.",
+          "impact_on_claims": "Magnitude is <=0.3 points and it is disclosed in research-log 14, so it does not change the H5/H6/H12 Wright claims. 'CURRENT R/P 1.00/1.00' on Wright says nothing about near-boundary phrasing.",
+          "suggested_fix": "Fix the docstring, or parse N from the text. Treat 'about a year ago' / N=1 as straddling (UNKNOWN), or document the completed-years assumption in label_policy. Add boundary unit tests."
+        },
+        {
+          "title": "quit_resolver drops or misses some explicit smoking-cessation statements",
+          "severity": "minor",
+          "evidence": "Probes with note 2025-06-15: 'Quit drinking 5 years ago and quit smoking 3 months ago.' -> UNKNOWN (the OTHER_SUBSTANCE check on before[-25:] sees 'drinking' and skips the smoking cue), but the reverse order gives CURRENT. 'He has recently stopped smoking for the past two weeks.' -> UNKNOWN ('for' triggers _NOT_CESSATION_BEFORE). 'Years since quitting: 1' -> no candidate: the years-since-quitting pattern is only searched after the cue, and the cue is inside the phrase, so the pattern is unreachable. On Wright, all such notes that ran before the script crashed (15 of 28) also carry a full quit date, so this is harmless there.",
+          "impact_on_claims": "No effect on the Wright numbers checked. It lowers CURRENT recall for recent quitters on real text (for example the SDOH 'past two weeks' premise), which matters for the recommended deployment.",
+          "suggested_fix": "Restrict the substance exclusion to the clause segment that contains the cue (split on 'and'/','). Allow 'for the past N weeks/months' after stopped/quit cues. Search the years-since-quitting pattern in the text before the cue."
+        },
+        {
+          "title": "SDOH mapping 'currently smoker = T -> CURRENT' overrides contradictory and non-combustible cases",
+          "severity": "minor",
+          "evidence": "Combo 1110 (cur and notcur both True) -> CURRENT for the train premise 'He quit smoking 6 years ago but dips (smokeless) tobacco.' POLICY_TEXT is combustible-only, which would give FORMER. Combo 0010 'She smoked 1 to 2 packs a day from age 18 to 54' -> UNKNOWN(past-use-current-unstated). 1010 'She has a 27 pack year smoking history' -> CURRENT. In test, CURRENT includes 'She has a history of smoking one pack per day for 18 years'.",
+          "impact_on_claims": "Only 1 train item is clearly wrong under the policy, so the effect on the headline is negligible. It shows that SDOH labels are released annotations and not policy-conformant.",
+          "suggested_fix": "Map cur&notcur conflicts to UNKNOWN(conflict), or flag them. List smokeless tobacco among the known policy disagreements."
+        }
+      ],
+      "verified": [
+        {
+          "angle": "labels",
+          "title": "SDOH-NLI headline numbers (CV 0.868 vs 0.779; test 0.877 vs 0.616) use native status labels, not the project's one-year policy, but the README shows them as results for the recommended pipeline, which includes the quit-date reader",
+          "severity": "major",
+          "evidence": "run_h7_ood.sdoh_label maps notcur&past&!notpast -> FORMER with no timing check. The protocol (experiments/h7-ood-sdoh-nli/protocol.md L19-20) says 'native — no one-year rule', but README 'Recommended model' puts the SDOH table under a pipeline with 'Quit-date reader + one-year rule'. Its CAUTION names only 'cigars, third parties'. Spot-check of gold FORMER premises: test 'She quit smoking about 6 weeks ago' (policy: CURRENT), test 'The patient had been previously a smoker' (policy: UNKNOWN timing-unresolved), train 'quit smoking approximately 2 months prior to admission', 'recently stopped smoking for the past two weeks', 'smoked significantly up until several months ago'. I ran src.quit_resolver.resolve_quit + apply_one_year_rule on the gold FORMER premises with a nominal note date of 2010-01-01 (scratch a9.py). Under the policy: test 3 FORMER -> {CURRENT 1, FORMER 1, UNKNOWN 1}; validation 8 -> {FORMER 4, UNKNOWN 4}; train 35 -> {FORMER 21, UNKNOWN 13, CURRENT 1}.",
+          "impact_on_claims": "Both arms are trained and scored on the same native labels, so the mapping does not favour Flan over TF-IDF in (a)/(b). However, the SDOH scores do not measure the recommended pipeline under smoking-status-v1. Under that policy, 2 of the 3 locked-test FORMER labels would change and about 40% of train FORMER labels would change, so the policy-level SDOH score was never measured.",
+          "suggested_fix": "Label the SDOH tables 'native status (no one-year rule)' and add a caveat that SDOH FORMER includes recent quitters and undated former use. Optionally report a policy-relabelled sensitivity slice: apply the resolver/policy to the FORMER premises and rescore the existing predictions.",
+          "verdict": {
+            "refuted": false,
+            "reasoning": "Every part of the finding reproduced. scripts/run_h7_ood.py sdoh_label (L36-50) returns FORMER for notcur & past & !notpast and never checks timing. experiments/h7-ood-sdoh-nli/protocol.md says the mapping is \"native — no one-year rule, because SDOH-NLI has no note dates\". In README L106-133, the SDOH-NLI table sits directly under the Recommended-model diagram, which routes every output through \"Quit-date reader + one-year rule\". The table does not say the labels are native status. The CAUTION at about L150 names only \"cigars, third parties\" as label differences. docs/tracking/findings.md says \"mapped to native 4-class\" for H7 but not in the H9/H12 headline. I applied src.quit_resolver.resolve_quit + apply_one_year_rule to the gold FORMER premises (note date 2010-01-01) and got exactly the auditor's counts. In the locked test, 2 of 3 FORMER labels change: \"She quit smoking about 6 weeks ago\" becomes CURRENT, and \"The patient had been previously a smoker\" becomes UNKNOWN. The auditor's caveat also holds. Both arms are trained and scored on the same native labels, so the Flan vs TF-IDF comparison in (a)/(b) is still valid as a native-status comparison. The problem is in how the results are described, not in the comparison itself: the README presents the SDOH numbers as results for the recommended one-year-policy pipeline, and that pipeline was never scored on SDOH. A fair severity is moderate or major for documentation. It is not a bug in the numbers.",
+            "reproduced_evidence": "Command: /home/user/venv-lite/bin/python scratchpad/chk.py. The script loads each split with run_h7_ood.load_sdoh, then runs apply_one_year_rule('FORMER', resolve_quit(t, note_date=2010-01-01)) on every gold FORMER premise. Output:\ntrain 570 {'UNKNOWN': 457, 'CURRENT': 59, 'FORMER': 35, 'NEVER': 19} FORMER-> {'FORMER': 21, 'UNKNOWN': 13, 'CURRENT': 1}\nvalidation 109 {'UNKNOWN': 88, 'CURRENT': 12, 'FORMER': 8, 'NEVER': 1} FORMER-> {'UNKNOWN': 4, 'FORMER': 4}\ntest: 'She quit smoking about 6 weeks ago' -> CURRENT; 'She quit smoking in 1972.' -> FORMER; 'The patient had been previously a smoker' -> UNKNOWN; test FORMER-> {'CURRENT': 1, 'FORMER': 1, 'UNKNOWN': 1}\nSupporting text: protocol.md says \"Mapping (... note-level, native — no one-year rule, because SDOH-NLI has no note dates)\". README L109 says \"with a rule-based quit-date reader for the one-year rule\", and the diagram has the node \"Quit-date reader + one-year rule\". The SDOH table heading (L122) is \"Human-written text (SDOH-NLI ...)\" with no \"native\" qualifier. The CAUTION says \"its labels differ from our policy at the edges (cigars, third parties)\".",
+            "corrected_impact": "The finding holds. The SDOH-NLI CV (0.868 vs 0.779) and locked-test (0.877 vs 0.616) numbers measure native status without the one-year rule. They are not scores for the recommended pipeline under smoking-status-v1. The model comparison is unaffected because both arms use the same labels. Under the policy, 2 of the 3 locked-test FORMER labels would change, plus 4 of 8 in validation and 14 of 35 (40%) in train. With only 15 smoking-labelled test premises, that could noticeably change the FORMER F1 and the macro-F1 at policy level. The README should label these tables \"native status (no one-year rule)\" and widen the CAUTION, or report a policy-relabelled sensitivity score."
+          }
+        },
+        {
+          "angle": "labels",
+          "title": "About half the CV gap and about two-thirds of the locked-test gap come from the NEVER class, whose SDOH annotation boundary is internally inconsistent (2 NEVER items in test)",
+          "severity": "major",
+          "evidence": "Pooled CV (compare_sdoh_cv.collect, scratch a8.py): Flan per-class F1 C .885 F .930 N .682 U .975; TF-IDF .847/.812/.486/.969. Macro without NEVER: Flan 0.930 vs TF-IDF 0.876 (delta 0.054 of the 0.089). Locked test (h12_sdoh.json): NEVER F1 0.667 vs 0.0 with only 2 NEVER items ('He denied any smoking history', 'She is a lifetime nonsmoker, nondrinker'). NEVER contributes 0.167 of the 0.261 delta; without NEVER it is 0.947 vs 0.821. The annotation boundary is inconsistent in train: 'No history of smoking, alcohol, or drug use' -> UNKNOWN(denial-only), but 'No history of any smoking, alcohol or drug abuse' -> NEVER. 'She is a nonsmoker' (and 15 similar) -> UNKNOWN, but 'The patient is a nonsmoker and does not use illegal drugs' -> NEVER. In test, 'He denied any smoking history' -> NEVER while 'No h/o Tobacco or ETOH use' and 'Denies any tobacco, alcohol, or illicit drug use of any kind' -> UNKNOWN. Of premises whose evidence matches status_rules.NEVER: train 13 are NEVER and 16 are UNKNOWN.",
+          "impact_on_claims": "The +0.261 locked-test gap and its CI rest mostly on whether 1-2 sentences in a noisy NEVER/denial boundary come out as NEVER. The direction (Flan >= TF-IDF) holds without NEVER, but the effect size is overstated as a general-quality difference.",
+          "suggested_fix": "Report macro-F1 without NEVER (or C/F/U plus NEVER separately) next to the headline. State that the test NEVER class has n=2 and that SDOH's NEVER/denial-only boundary is inconsistent. Treat the 0.261 as unstable.",
+          "verdict": {
+            "refuted": false,
+            "reasoning": "I re-checked every number in the finding and all of them hold.\n\n(1) CV. In experiments/sdoh-cv-leaderboard.json, the per-class F1 for Flan-T5-base FT is C .885, F .930, N .682, U .975 (pooled 0.8678). For TF-IDF (S) it is .847, .812, .486, .969 (pooled 0.7787). Without NEVER, the macro-F1 is Flan (.885+.930+.975)/3 = 0.930 and TF-IDF (.847+.812+.969)/3 = 0.876. That is a 0.054 gap out of the 0.089 total. The NEVER class adds (0.682-0.486)/4 = 0.049, which is about 55% of the gap.\n\n(2) Locked test. h12_sdoh.json has 2 NEVER items, with NEVER F1 0.667 for Flan and 0.0 for TF-IDF. NEVER therefore adds 0.667/4 = 0.167 of the 0.261 gap (64%). Without NEVER the scores are Flan (1.0+.857+.984)/3 = 0.947 and TF-IDF (.818+.667+.978)/3 = 0.821. The other 0.094 comes from CURRENT and FORMER, and FORMER has only n=3.\n\n(3) Label boundary. I loaded the data with run_h7_ood.load_sdoh plus add_evidence and checked it against status_rules.NEVER. In train, the rule matches 13 NEVER items and 16 UNKNOWN items. The finding's example pairs are all present:\n- 'No history of smoking, alcohol, or drug use' is labelled UNKNOWN/denial-only, but 'No history of any smoking, alcohol or drug abuse.' is labelled NEVER.\n- 'The patient is a nonsmoker.' and about 11 other 'nonsmoker' sentences are UNKNOWN/denial-only, but 'The patient is a nonsmoker and does not use illegal drugs' (two copies) is NEVER.\nIn test, 'He denied any smoking history' is NEVER, while 'No h/o Tobacco or ETOH use.' and 'Denies any tobacco, alcohol, or illicit drug use of any kind' are UNKNOWN.\n\nOne small caveat: 'lifetime nonsmoker' -> NEVER, and arguably 'denied any smoking history' -> NEVER, can be defended as lifetime wording. The train contradictions between near-identical sentences cannot be defended that way. The validation split, also in h12_sdoh.json, points the same direction: it has 1 NEVER item, both arms score NEVER F1 0.667, and the gap there is only +0.015 (CI -0.11 to 0.14).\n\nOverall the finding is correct, with no material errors.",
+            "reproduced_evidence": "Commands were run from /home/user/finetune.\n\npython3 reading experiments/sdoh-cv-leaderboard.json:\nFlan-T5-base fine-tuned 0.8678 {CURRENT .885, FORMER .93, NEVER .682, UNKNOWN .975}\nTF-IDF (S) 0.7787 {.847, .812, .486, .969}\nThis gives a CV macro without NEVER of 0.930 vs 0.876, a gap of 0.054 out of 0.089.\n\nexperiments/h12-final-confirmation/results/h12_sdoh.json, sdoh_test:\n- Flan 0.8769, per class {C 1.0, F .857, N .667, U .984}\n- TF-IDF 0.6158, per class {C .818, F .667, N 0.0, U .978}\n- delta 0.261, CI [0.024, 0.470]\n- label_counts: U 93, C 10, F 3, N 2\nWithout NEVER this is 0.947 vs 0.821. NEVER's share of the gap is 0.667/4 = 0.167.\n\nValidation: delta 0.0151, CI [-0.11, 0.138], with only 1 NEVER item.\n\nScratch script /tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/nev.py (load_sdoh + add_evidence + status_rules.NEVER):\n- train labels {U 457, C 59, F 35, N 19}; NEVER-rule matches by label {UNKNOWN 16, NEVER 13}\n- 'No history of smoking, alcohol, or drug use' -> UNKNOWN denial-only\n- 'No history of any smoking, alcohol or drug abuse.' -> NEVER\n- 'The patient is a nonsmoker.' and 'She is a nonsmoker' -> UNKNOWN denial-only\n- 'The patient is a nonsmoker and does not use illegal drugs' -> NEVER (x2)\n- test NEVER-rule matches {UNKNOWN 6, NEVER 1}\n- test NEVER items: 'He denied any smoking history', 'She is a lifetime nonsmoker, nondrinker'\n- 'No h/o Tobacco or ETOH use.' and 'Denies any tobacco, alcohol, or illicit drug use of any kind' -> UNKNOWN denial-only",
+            "corrected_impact": "The finding holds as stated (major).\n- **Locked test:** 64% of the +0.261 gap (0.167) comes from two NEVER sentences scored all-or-nothing. A further share comes from FORMER, which has n=3.\n- **CV:** about 55% of the +0.089 gap comes from NEVER, whose labels are inconsistent at the 'nonsmoker' / 'no history of' / denial boundary (the train rule-matches split 13 NEVER vs 16 UNKNOWN).\n- **Without NEVER:** Flan still leads, by 0.054 in CV and 0.126 on test. The direction of the claim survives, but the effect size behind the headline 0.261 is unstable.\n- **Validation:** the gap there is only 0.015, with a CI that includes 0.\n\nSuggested reporting: give macro-F1 without NEVER (C/F/U) alongside the headline. State that test NEVER has n=2 (and validation NEVER n=1). Note that SDOH's NEVER/denial-only labelling is inconsistent."
+          }
+        }
+      ]
+    },
+    {
+      "angle": "claims",
+      "ok": [
+        "(a) Reran scripts/compare_sdoh_cv.py (venv-lite, output to scratchpad only). Every committed leaderboard number reproduces exactly: Flan-base FT 0.868, folds [0.794, 0.939, 0.855, 0.867, 0.901], NEVER 0.68, delta +0.090 CI [+0.030, +0.151] p 0.001; TF-IDF(S) 0.779 [0.752, 0.785, 0.758, 0.73, 0.855]; small FT 0.795; vote 0.840; large ZS+guard 0.750; SciBERT 0.682 (NEVER 0.10). Flan wins 5/5 folds.",
+        "The leaderboard JSON (02:54:53) predates the H14 results. A rerun today adds 'Flan-T5-base-ada' (0.854) as a separate arm and does not overwrite the base arm.",
+        "H8 fold test_ids match StratifiedKFold(5, shuffle, rs=0), which H9 and H13 use, and y_true matches the labels for all 5 folds. SDOH train 570 = 59/35/19/457; validation 109 = 12/8/1/88; test 108 = 10/3/2/93.",
+        "(b) h12_sdoh.json numbers match the scratchpad h12.log exactly. TF-IDF validation 0.8312 and test 0.6158 reproduced independently. The test split is only loadable through --confirm-locked-test (run_h7_ood, run_h12_final). The H12 protocol was locked (7ed2b4b 02:56:12) before the test was opened (about 03:04).",
+        "run_h12_final.py diff 7ed2b4b to 81f4fec only refactors the Wright stage and adds --wright-only. The SDOH stage is unchanged. The 09:11 change to run_h9_flan_cv.py is only memory freeing.",
+        "(c) h12_wright.json: Flan pipeline 0.9718, TF-IDF 0.9734, native 0.9983 (599/600), CURRENT R/P 1.0/1.0, matching h12w.log and README.",
+        "H5 numbers (0.888, 0.947, 0.949, 0.957, 0/6 to 6/6, timing-unresolved 0.08 to 0.92, oracle 0.971–0.981, basic 0.898) and H6 numbers (0.973 v2, 0.971 v1, native 1.000, basic 0.949, messy 1.000) match the JSONs.",
+        "H7 validation (0.653 / 0.831 / 0.705 / 0.666, bootstrap -0.080 [-0.253, +0.094]) and 5x5 CV (0.599 / 0.793 / 0.779 / 0.772, 11/25) match the JSONs. H10 (0.751, 0.716, validation 0.504, Wright 6 changed, 0 wrong) matches h10.json. H9 zero-shot (0.435 / 0.616 / 0.683, Wright 0.594 / 0.822 / 0.809, 30 / 10.4 / 2.8 sentences/s) matches the JSONs and h9.log.",
+        "(d) Reran run_h13_cascade.py (stdout only). It reproduces results.json exactly, and the Flan fold mapping is aligned. Prediction (>=80% of gain at <=35% of cost at b=30%) holds: 87%, 30.5%.",
+        "Efficiency: 9.3 sentences/s and $5.08/M match the h12 JSON and log (0.17/3600/9.3×1e6 = 5.08). Prediction 4 is honestly reported as partially failed.",
+        "Research-log entries 13–21 agree numerically with the source JSONs apart from the items flagged in the findings. No protocol.md was edited after its results commit."
+      ],
+      "minor": [
+        {
+          "title": "The TF-IDF cost of $0.04 per million comes from no committed result, and per-note and per-sentence costs are mixed",
+          "severity": "minor",
+          "evidence": "scripts/run_h13_cascade.py:28 sets `TFIDF_USD_PER_M = 0.04  # pipeline_cli bench (per note; used as the per-sentence floor)`. No result file in experiments/ or docs/ contains this bench output. docs/results/e-wave-1-results-2026-10-29.md:138 says arm A is about 350 notes/s on one core, '≈ $0.15/M'. findings.md and the H13 protocol say '$0.04 per million notes'. README and the H13 table say '$0.04 per million sentences' and add it to Flan's per-sentence cost (cascade 2.07 = 0.04 + 0.4×5.08). README's cost table also compares per-million-sentence costs with 'Published cloud-LLM full-note costs 120–6,610 per million notes'. Notes average 1.8 crops and 8.5 triggers each (e0_retrieval.json), so the units do not match.",
+          "impact_on_claims": "The cost comparisons in README and H13 rest on an unarchived number with mixed units. The cascade's TF-IDF share is negligible, but the comparison with published per-note costs is not like-for-like.",
+          "suggested_fix": "Commit the pipeline_cli bench JSON. Report every cost in one unit (per note or per evidence sentence) and state the conversion, or label the cloud-LLM row as per note against per sentence."
+        },
+        {
+          "title": "The H12 locked-test result is not re-auditable: no per-premise predictions were saved, and the JSON was rebuilt from a log",
+          "severity": "minor",
+          "evidence": "h12_sdoh.json has a note: 'Recovered from the run log: the process was OOM-killed...'. It contains only aggregates, no `pred` arrays (unlike the H9 and H8 fold JSONs). The aggregates match /tmp/claude-0/.../scratchpad/h12.log line for line. The fine-tuned model (experiments/h12-final-confirmation/results/flan-t5-base-sdoh, 946M) is gitignored (.gitignore:71). Run history differs between sources: analysis.md says 'the first H12 process was OOM-killed', while research-log entry 21 says 'allocator fix after two OOM kills'.",
+          "impact_on_claims": "Claim (b) cannot be checked per premise from tracked artefacts, so the NEVER/FORMER error analysis is not possible without rerunning torch.",
+          "suggested_fix": "Re-score the saved model once and commit the per-premise predictions without reopening any decision. Reconcile the OOM-kill count between analysis.md and the research log."
+        },
+        {
+          "title": "The CV significance claim ignores training variance (single seed), and NEVER F1 rests on 19 premises",
+          "severity": "minor",
+          "evidence": "compare_sdoh_cv.py bootstraps premises of the pooled out-of-fold predictions from one fine-tune per fold (seed 42). I reproduced it: Flan-base 0.868, folds [0.794, 0.939, 0.855, 0.867, 0.901], delta +0.090, CI [+0.030, +0.151], p<=0 0.001. The H14 control (same model, Adafactor instead of AdamW) gives pooled 0.854 with fold scores [0.818, 0.860, 0.891, 0.867, 0.829]. Fold 1 moves by 0.079 from the optimizer change alone. The CV set has NEVER = 19 of 570 (3–4 per fold), so 'NEVER F1 0.68 vs 0.49' is based on 19 items. README does not give that count.",
+          "impact_on_claims": "Claim (a) is reproduced exactly, but the CI understates uncertainty: it excludes seed and recipe variance. 'Significantly beats' (H9 analysis, findings) is stronger than the evidence supports.",
+          "suggested_fix": "State that the CI covers premise resampling only, with one training seed. Add seeds or report the H14 Adafactor run as a variance indicator. Give NEVER n=19 next to NEVER F1."
+        },
+        {
+          "title": "README places scores from different statistics in one '5-fold CV (pooled)' column",
+          "severity": "minor",
+          "evidence": "README lists 'Trained on synthetic notes only 0.599 / NEVER 0.24'. That number comes from the H7 5x5 repeated CV fold mean (h7_exploratory_cv_sdoh_train.json W->S macro_f1_mean 0.599), not from pooled out-of-fold predictions on the H8 folds. The research log and H8 analysis report SciBERT 0.673 / TF-IDF 0.776 (fold means), while README and findings use 0.682 / 0.779 (pooled). H9 analysis reports ZS-base as 0.614 in its table and 0.616 in the predictions table (pooled vs fold mean).",
+          "impact_on_claims": "Small inconsistencies. The ranking does not change.",
+          "suggested_fix": "Label the 0.599 row as '5x5 CV mean' or recompute it pooled on the shared folds. Use one statistic consistently."
+        },
+        {
+          "title": "README mislabels Wright dev results as part of the 'locked-test confirmation' and gives a wrong CURRENT precision",
+          "severity": "minor",
+          "evidence": "README trail row 'H12 | Locked-test confirmation | Confirmed (0.877 vs 0.616; Wright 0.972)'. The Wright 0.972 is on the 600-note dev split (h12_wright.json n=600). That split was already used by H5, H6, H9 zero-shot and H10. README's Wright table gives 'TF-IDF learning the one-year labels directly ... CURRENT R/P 0.92 / 1.00', but h5_dev_crop_text.json A0 current_precision is 0.994 (v1 and v2), which rounds to 0.99. README also says Flan 'trains in minutes on a CPU', but the Flan model behind the Wright 0.972 took about 3.7 h to train (H12 analysis, research-log 21).",
+          "impact_on_claims": "Claim (c): the figures 0.972 / 0.973 / 599/600 / 0.888 are correct. The framing (locked test, training time) and one precision value are slightly off.",
+          "suggested_fix": "Mark Wright 0.972 as dev (not locked). Change 1.00 to 0.99. Qualify 'trains in minutes': SDOH-only takes minutes, the Wright+SDOH model about 3.7 h."
+        },
+        {
+          "title": "'Zero-shot arms significantly worse' is true only against Flan-base FT, not against TF-IDF",
+          "severity": "minor",
+          "evidence": "Research-log 19 says 'Zero-shot arms significantly worse', next to the TF-IDF comparison. The H12 protocol says 'H8 SciBERT ... and all zero-shot arms were significantly worse'. In the leaderboard (delta vs TF-IDF), the guarded zero-shot arms are not significant: large ZS+guard -0.029 [-0.096, +0.037], base ZS+guard -0.064 [-0.134, +0.006]. My bootstrap against Flan-base FT finds all zero-shot arms significantly worse (large ZS+guard -0.117 [-0.188, -0.052]). Vote vs Flan-base is -0.029 [-0.066, +0.006], not significant, and is correctly described only as 'worse'.",
+          "impact_on_claims": "The wording is ambiguous, and it is wrong if the reference is TF-IDF, the only paired comparison the leaderboard actually computes.",
+          "suggested_fix": "Name the reference arm, and add the paired comparison against Flan-base FT to the leaderboard."
+        },
+        {
+          "title": "'Plan committed before its run' has partial exceptions (H11, E-wave-1 retrieval-v2)",
+          "severity": "minor",
+          "evidence": "H11 protocol commit 40654ff is at 02:40:33. Flan-base fold 0 and fold 1 JSONs already existed (mtimes 02:29, 02:35). The protocol title discloses '2 of 5 folds seen'. E-wave-1 has no protocol.md, and its results were first committed inside the H5 protocol commit 048863a. The retrieval-v2 lexicon was revised after inspecting misses over all 2,750 known-status notes (e0_retrieval.json overall notes=3000). That set includes the Wright test split described as locked. The H12 protocol (02:56:12) was committed after all H9 CV folds finished (fold4 at 02:54:28) but before the SDOH test was opened (h12.log 03:04, results commit 8236db2 03:21:14): OK for the test claim. I found no protocol.md modified after its results; each has a single commit.",
+          "impact_on_claims": "The README banner '(every plan committed before its run)' is slightly overstated. The H12 test lock itself holds.",
+          "suggested_fix": "Qualify the banner. Note in the E-wave-1 write-up that the retrieval-v2 lexicon was tuned using misses that included the Wright test notes."
+        }
+      ],
+      "verified": [
+        {
+          "angle": "claims",
+          "title": "The locked-test win (0.877 vs 0.616, +0.261) depends on 2 NEVER premises; with those, TF-IDF reaches Flan's score",
+          "severity": "major",
+          "evidence": "I reproduced TF-IDF on the SDOH-NLI test split with run_h7_ood.fit_predict (train on all SDOH train). The result matches h12_sdoh.json: macro-F1 0.6158, NEVER F1 0.0. Test label counts are UNKNOWN 93, CURRENT 10, FORMER 3, NEVER 2. TF-IDF predicts UNKNOWN for both NEVER premises ('He denied any smoking history', 'She is a lifetime nonsmoker, nondrinker'). Counterfactual run in /home/user/venv-lite: relabelling 1 NEVER prediction gives TF-IDF 0.7838; relabelling both gives 0.8685, against Flan's 0.8769. So about 64% of the +0.261 gap comes from one class with 2 examples. On the other held-out split (validation, n=109, 1 NEVER) the gap is +0.015, CI [-0.110, +0.138], p<=0 = 0.42 (h12_sdoh.json, matches the scratchpad h12.log). README's Recommended-model section omits the validation result and puts 0.877/0.616 in the headline table. H12 analysis.md says 'the gap's size is uncertain even though its sign is clear'.",
+          "impact_on_claims": "Claim (b) is numerically correct but overstated. The 'sign is clear' and 'Confirmed' framing does not hold: on held-out data, one split shows no detectable difference and the other turns on two sentences. README's caution box mentions '15 smoking-labelled premises' but not that the whole margin is NEVER 0/2 vs 1/2.",
+          "suggested_fix": "In README, show validation (0.846 vs 0.831, CI includes 0) next to the test result. State n per class (CURRENT 10, FORMER 3, NEVER 2). Say the test gap is driven mostly by 2 NEVER premises. Downgrade 'sign is clear' in H12 analysis.md.",
+          "verdict": {
+            "refuted": false,
+            "reasoning": "I reproduced every number in the finding, so I could not refute it. On the locked test, TF-IDF trained on all of SDOH train gets macro-F1 0.6158 with NEVER F1 0.0. The test labels are UNKNOWN 93, CURRENT 10, FORMER 3, NEVER 2, and TF-IDF predicts UNKNOWN for both NEVER premises. Changing one of those two predictions to NEVER (either one) gives 0.7838. Changing both gives 0.8685, against Flan's 0.8769. Flan's own NEVER F1 is 0.667. So 0.168 of the +0.261 gap (64%) comes from a single NEVER sentence, and about 97% (0.253) comes from the two NEVER sentences together.\n\nh12_sdoh.json shows that on validation (n=109, 1 NEVER) the gap is +0.0151, CI [-0.110, +0.138], p_le_0 0.42. The README \"Recommended model\" table and the text under it give only the 5-fold CV and locked-test numbers (0.877 / 0.616, +0.261). They do not mention validation. The README caution box (line 154) says only \"15 smoking-labelled premises\". H12 analysis.md (lines 34-35) says \"the gap's size is uncertain even though its sign is clear\". Two details soften the finding. findings.md does report validation 0.846 vs 0.831. The test bootstrap CI does exclude 0 (p 0.012), but with 2 NEVER examples that CI is fragile, and the validation split shows no detectable gap.",
+            "reproduced_evidence": "I ran a scratchpad script (/tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/cf.py) with /home/user/venv-lite/bin/python from /home/user/finetune. It uses run_h7_ood.add_evidence/load_sdoh/fit_predict and src.metrics:\ncounts {'UNKNOWN': 93, 'CURRENT': 10, 'FORMER': 3, 'NEVER': 2}\ntfidf 0.6158\n'He denied any smoking history' UNKNOWN\n'She is a lifetime nonsmoker, nondrinker' UNKNOWN\nfix 1 0.7838\nfix 2 0.8685\nfix other one 0.7838\n\nFrom h12_sdoh.json: test Flan 0.8769 (NEVER 0.667), TF-IDF 0.6158, delta 0.261, CI [0.0243, 0.4696], p_le_0 0.0116. Validation Flan 0.8463, TF-IDF 0.8312, delta 0.0151, CI [-0.1099, 0.1383], p_le_0 0.4202, NEVER count 1.\n\ngrep of README.md finds no validation result in the Recommended-model section (lines 106-154). Line 154's caveat says only \"15 smoking-labelled premises\". analysis.md lines 34-35 contain \"size is uncertain even though its sign is clear\". docs/tracking/findings.md line 21 does include \"validation 0.846 vs 0.831\".",
+            "corrected_impact": "The finding holds. Claim (b) is numerically correct but overstated. The +0.261 locked-test margin depends almost entirely on two NEVER sentences: getting one right closes 64% of the gap, and getting both right closes about 97%. The other held-out split, validation, shows no detectable difference (+0.015, CI includes 0). The README headline puts 0.877 vs 0.616 forward without the validation result or the per-class n. The \"sign is clear\" wording in H12 analysis.md is too strong. The overall preference for Flan over TF-IDF still stands on the 5-fold CV result (+0.090, CI +0.030 to +0.151, 5/5 folds), which this finding does not touch. The fix is to the framing of the test margin: show validation next to the test result, give the per-class n, and say the test gap is driven by 2 NEVER premises. The recommendation itself does not need to change. Severity: major for presentation and reporting, not a reversal of the result."
+          }
+        },
+        {
+          "angle": "claims",
+          "title": "The recommended deployment (TF-IDF -> Flan cascade at 40%) was only tested exploratorily, and the 40% point was chosen after seeing CV results",
+          "severity": "major",
+          "evidence": "README's TIP and diagram recommend 'Flan-T5-base ... behind a TF-IDF confidence cascade' with 'confident 60% / hard 40%'. The H13 protocol (commit 204dfe4) pre-specified b=30% as the prediction. analysis.md then picked 'Recommended operating point: Flan on ~40%' because it had the best pooled CV score (0.865 vs 0.858 at 30%, 0.863 at 50%), on the same SDOH train CV used to choose Flan. Timing: protocol.md mtime 03:21:46, protocol commit 03:22:03, results.json 03:22:08, analysis.md 03:22:21. The README cascade row shows '—' for locked test. The H12 confirmatory tests (SDOH test 0.877, Wright 0.972) used Flan alone, not the cascade. I reproduced H13 with scripts/run_h13_cascade.py: 0.791 / 0.820 / 0.840 / 0.858 / 0.865 / 0.863 / 0.868, matching results.json.",
+          "impact_on_claims": "Claim (d): the numbers are correct, but the configuration README recommends has no confirmatory or held-out evidence. Its operating point was selected on the evaluation data. The '(every plan committed before its run)' banner does not cover the choice of 40%.",
+          "suggested_fix": "Mark the cascade in README as exploratory and unconfirmed. Either recommend plain Flan-T5-base, which is what H12 confirmed, or pre-register 40% and confirm it on new labelled data. State that 40% was chosen post hoc on CV.",
+          "verdict": {
+            "refuted": false,
+            "reasoning": "I could not refute the finding; every factual point checks out. (1) The H13 protocol (commit 204dfe4, 03:22:03) is unchanged since it was committed. It was labelled EXPLORATORY and its only prediction was about b=30%. It does not say how an operating point would be chosen. (2) analysis.md was written after results.json (03:22:08 then 03:22:21). It picks \"Recommended operating point: Flan on ~40%\" because 40% has the best pooled out-of-fold CV score (0.8653, against 0.8576 at 30% and 0.8628 at 50%). So the point was picked after seeing the results, from a grid of 5, on the same SDOH train CV used to choose Flan. (3) The H12 protocol's pre-registered decision rule says only \"Flan-T5-base (fine-tuned) becomes the recommended status model ... with TF-IDF as the low-cost fallback\". It never mentions a cascade. H12's locked test (0.877) and Wright run (0.972) evaluated Flan alone. (4) README line 109 (TIP) and the mermaid diagram (lines 115-116, 'confident 60%' / 'low margin (40%)' / 'hard 40%') recommend the cascade with no caveat. The README cascade row (line 127) shows '—' for locked test. Mitigating points: H13 is labelled \"(exploratory)\" in the protocol, analysis, findings.md, research-log and the README trail table (line 172). analysis.md also says \"Needs confirmation on new labelled data\". And the post-hoc optimism is small: 40% beats 30% and 50% by only 0.003-0.008 macro-F1, well inside CV noise. So the problem is the README presenting an unconfirmed, CV-tuned configuration as the recommendation. The H13 numbers themselves are not inflated.",
+            "reproduced_evidence": "`git log -- experiments/h13-cascade` shows 204dfe4 at 03:22:03 (protocol + scripts/run_h13_cascade.py) and 3788610 at 03:22:42 (results). `ls --full-time` gives protocol.md 03:21:46, results.json 03:22:08 and analysis.md 03:22:21. `git diff 204dfe4 -- protocol.md` is empty. The protocol's Prediction section is \"At b = 30%, the cascade keeps ≥ 80% ... (≥ 0.851)\", with nothing about choosing a b. results.json pooled_macro_f1 by Flan call share: 0.0 0.7913, 0.1 0.8196, 0.2 0.8402, 0.3 0.8576, 0.4 0.8653, 0.5 0.8628, 1.0 0.8678. analysis.md says \"Recommended operating point: Flan on ~40% ... Needs confirmation on new labelled data\". The H12 protocol's pre-registered decision rule (from `sed -n 40,60p`) is \"Flan-T5-base (fine-tuned) becomes the recommended status model ... with TF-IDF as the low-cost fallback\". `grep cascade` on the H12 protocol finds nothing. README line 109 says \"behind a TF-IDF confidence cascade\", lines 115-116 say \"confident 60%\" and \"hard 40%\", and line 127 reads \"Cascade: TF-IDF → Flan on 40% | 0.865 | — | 0.70\".",
+            "corrected_impact": "The finding holds; I would rate it moderate rather than major. Claim (d)'s numbers are correct, and the cascade is labelled exploratory in the tracking docs and the README trail table. What is wrong is that the README's headline TIP and diagram recommend the cascade at 40% as the deployment, without saying it is exploratory. That configuration was not the pre-registered H12 decision (Flan alone, TF-IDF as fallback) and has no held-out confirmation. The 40% point was chosen post hoc on CV, though the optimism this adds is negligible (about 0.003-0.008 over 30% and 50%). Fix: name plain Flan-T5-base as the confirmed recommendation, present the cascade as an exploratory, cost-saving option chosen post hoc on CV, and confirm it on new labelled data."
+          }
+        }
+      ]
+    }
+  ],
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Audit"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Verify"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "audit:leakage",
+      "phaseIndex": 1,
+      "phaseTitle": "Audit",
+      "agentId": "ad8c6e15c6c6c42da",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352051895,
+      "queuedAt": 1793352051850,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352247714,
+      "tokens": 99995,
+      "toolCalls": 19,
+      "durationMs": 195817,
+      "resultPreview": "{\"findings\":[{\"title\":\"Locked SDOH-NLI test gap (0.877 vs 0.616) rests on 15 smoking-labelled premises; it is not explained by memorisation, but by 5 FORMER/NEVER items\",\"severity\":\"major\",\"evidence\":\"Script /tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/leak.py (venv-lite, uses run_h7_ood.load_sdoh + add_evidence). After load_sdoh the splits are train 570, validation 109…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "audit:comparison",
+      "phaseIndex": 1,
+      "phaseTitle": "Audit",
+      "agentId": "a39536532e6632cc8",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352051896,
+      "queuedAt": 1793352051850,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352227430,
+      "tokens": 100781,
+      "toolCalls": 20,
+      "durationMs": 174415,
+      "resultPreview": "{\"findings\":[{\"title\":\"Headline TF-IDF baseline (0.779) is trained on a different row set than the Flan-T5 arm it is compared against; the like-for-like TF-IDF scores 0.791 and the gap shrinks from +0.090 to +0.078\",\"severity\":\"major\",\"evidence\":\"scripts/run_h8_encoder_cv.py tfidf-S calls run_h7_ood.fit_predict(a, b). That function trains on every train-fold row and replaces empty evidence with '_…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "audit:labels",
+      "phaseIndex": 1,
+      "phaseTitle": "Audit",
+      "agentId": "af012748e0f9c4cc2",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352229532,
+      "queuedAt": 1793352051850,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352598043,
+      "tokens": 143419,
+      "toolCalls": 29,
+      "durationMs": 368510,
+      "resultPreview": "{\"findings\":[{\"title\":\"SDOH-NLI headline numbers (CV 0.868 vs 0.779; test 0.877 vs 0.616) use native status labels, not the project's one-year policy, but the README shows them as results for the recommended pipeline, which includes the quit-date reader\",\"severity\":\"major\",\"evidence\":\"run_h7_ood.sdoh_label maps notcur&past&!notpast -> FORMER with no timing check. The protocol (experiments/h7-ood-s…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "audit:claims",
+      "phaseIndex": 1,
+      "phaseTitle": "Audit",
+      "agentId": "a26248950d5b5afa4",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352248974,
+      "queuedAt": 1793352051850,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352676720,
+      "tokens": 178340,
+      "toolCalls": 45,
+      "durationMs": 427746,
+      "resultPreview": "{\"findings\":[{\"title\":\"The locked-test win (0.877 vs 0.616, +0.261) depends on 2 NEVER premises; with those, TF-IDF reaches Flan's score\",\"severity\":\"major\",\"evidence\":\"I reproduced TF-IDF on the SDOH-NLI test split with run_h7_ood.fit_predict (train on all SDOH train). The result matches h12_sdoh.json: macro-F1 0.6158, NEVER F1 0.0. Test label counts are UNKNOWN 93, CURRENT 10, FORMER 3, NEVER 2.…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 5,
+      "label": "verify:comparison:0",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "acab615c090762a62",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352599506,
+      "queuedAt": 1793352229608,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "I could not refute the finding; it reproduces exactly. In t…",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352640686,
+      "tokens": 71315,
+      "toolCalls": 4,
+      "durationMs": 41180,
+      "resultPreview": "{\"refuted\":false,\"reasoning\":\"I could not refute the finding; it reproduces exactly. In the code, scripts/run_h8_encoder_cv.py arm tfidf-S calls run_h7_ood.fit_predict(a, b). That function fits the SVM on every train-fold row and turns empty evid0 into the token '__no_evidence__'. scripts/run_h9_flan_cv.py ft-S filters to a[a['evid0'].str.len() > 0] before fine-tuning. So the two arms are trained …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 6,
+      "label": "verify:leakage:0",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "aa51e68abf8062574",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352641937,
+      "queuedAt": 1793352249064,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "I reproduced every factual claim in the finding, and all of…",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352676579,
+      "tokens": 69135,
+      "toolCalls": 4,
+      "durationMs": 34642,
+      "resultPreview": "{\"refuted\":false,\"reasoning\":\"I reproduced every factual claim in the finding, and all of them hold. I re-ran the check with my own script, /tmp/claude-0/-home-user/0bfd38ec-7533-5c32-8deb-0b20c280185a/scratchpad/v_leak.py, using the venv-lite environment, run_h7_ood.load_sdoh and add_evidence.\\n- **Split sizes:** load_sdoh gives train 570, validation 109 and test 108 premises.\\n- **Test labels:**…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 7,
+      "label": "verify:labels:0",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "a36ba9f377690ae98",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352677659,
+      "queuedAt": 1793352599573,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Every part of the finding reproduced. scripts/run_h7_ood.py…",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352705587,
+      "tokens": 69798,
+      "toolCalls": 4,
+      "durationMs": 27927,
+      "resultPreview": "{\"refuted\":false,\"reasoning\":\"Every part of the finding reproduced. scripts/run_h7_ood.py sdoh_label (L36-50) returns FORMER for notcur & past & !notpast and never checks timing. experiments/h7-ood-sdoh-nli/protocol.md says the mapping is \\\"native — no one-year rule, because SDOH-NLI has no note dates\\\". In README L106-133, the SDOH-NLI table sits directly under the Recommended-model diagram, whic…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 8,
+      "label": "verify:labels:1",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "a4af44925278031ac",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352678044,
+      "queuedAt": 1793352599573,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "I re-checked every number in the finding and all of them ho…",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352722556,
+      "tokens": 71534,
+      "toolCalls": 7,
+      "durationMs": 44512,
+      "resultPreview": "{\"refuted\":false,\"reasoning\":\"I re-checked every number in the finding and all of them hold.\\n\\n(1) CV. In experiments/sdoh-cv-leaderboard.json, the per-class F1 for Flan-T5-base FT is C .885, F .930, N .682, U .975 (pooled 0.8678). For TF-IDF (S) it is .847, .812, .486, .969 (pooled 0.7787). Without NEVER, the macro-F1 is Flan (.885+.930+.975)/3 = 0.930 and TF-IDF (.847+.812+.969)/3 = 0.876. That…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 9,
+      "label": "verify:claims:0",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "ad1666610aeea10dc",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352706778,
+      "queuedAt": 1793352678131,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "I reproduced every number in the finding, so I could not re…",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352745421,
+      "tokens": 74089,
+      "toolCalls": 6,
+      "durationMs": 38643,
+      "resultPreview": "{\"refuted\":false,\"reasoning\":\"I reproduced every number in the finding, so I could not refute it. On the locked test, TF-IDF trained on all of SDOH train gets macro-F1 0.6158 with NEVER F1 0.0. The test labels are UNKNOWN 93, CURRENT 10, FORMER 3, NEVER 2, and TF-IDF predicts UNKNOWN for both NEVER premises. Changing one of those two predictions to NEVER (either one) gives 0.7838. Changing both gi…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 10,
+      "label": "verify:claims:1",
+      "phaseIndex": 2,
+      "phaseTitle": "Verify",
+      "agentId": "ac36253147341bda8",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1793352723714,
+      "queuedAt": 1793352678132,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "I could not refute the finding; every factual point checks …",
+      "promptPreview": "Repository: /home/user/finetune (git). Smoking-status classification research (CURRENT/FORMER/NEVER/UNKNOWN). Read README.md section \"Recommended model\", docs/tracking/findings.md and docs/tracking/research-log.md for the headline claims, and experiments/*/protocol.md + analysis.md + results/ for the evidence.\nData on disk: Wright synthetic benchmark at /home/user/ext/smokingbenchmark (basic/messy…",
+      "promptFramed": true,
+      "lastProgressAt": 1793352752819,
+      "tokens": 69115,
+      "toolCalls": 5,
+      "durationMs": 29105,
+      "resultPreview": "{\"refuted\":false,\"reasoning\":\"I could not refute the finding; every factual point checks out. (1) The H13 protocol (commit 204dfe4, 03:22:03) is unchanged since it was committed. It was labelled EXPLORATORY and its only prediction was about b=30%. It does not say how an operating point would be chosen. (2) analysis.md was written after results.json (03:22:08 then 03:22:21). It picks \\\"Recommended …"
+    }
+  ],
+  "totalTokens": 947521,
+  "totalToolCalls": 143
+}
