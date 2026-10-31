@@ -130,6 +130,32 @@
   }
  },
  {
+  "arm": "Flan-T5-lm100k-base fine-tuned",
+  "complete": true,
+  "pooled_macro_f1": 0.7864,
+  "per_class_f1": {
+   "CURRENT": 0.8,
+   "FORMER": 0.849,
+   "NEVER": 0.531,
+   "UNKNOWN": 0.966
+  },
+  "fold_macro_f1": [
+   0.752,
+   0.718,
+   0.831,
+   0.843,
+   0.803
+  ],
+  "delta_vs_tfidf": {
+   "mean": 0.0076,
+   "ci95": [
+    -0.054,
+    0.0709
+   ],
+   "p_le_0": 0.4086
+  }
+ },
+ {
   "arm": "TF-IDF (S)",
   "complete": true,
   "pooled_macro_f1": 0.7787,
@@ -226,6 +252,32 @@
   }
  },
  {
+  "arm": "SciBERT 20ep (seed42)",
+  "complete": true,
+  "pooled_macro_f1": 0.7015,
+  "per_class_f1": {
+   "CURRENT": 0.84,
+   "FORMER": 0.862,
+   "NEVER": 0.143,
+   "UNKNOWN": 0.961
+  },
+  "fold_macro_f1": [
+   0.69,
+   0.649,
+   0.773,
+   0.612,
+   0.747
+  ],
+  "delta_vs_tfidf": {
+   "mean": -0.0762,
+   "ci95": [
+    -0.146,
+    0.0014
+   ],
+   "p_le_0": 0.974
+  }
+ },
+ {
   "arm": "SciBERT generic (S)",
   "complete": true,
   "pooled_macro_f1": 0.6816,
@@ -305,6 +357,10 @@
  },
  {
   "arm": "SciBERT generic (W+S)",
+  "complete": false
+ },
+ {
+  "arm": "Flan-T5-byt5-small fine-tuned",
   "complete": false
  }
 ]

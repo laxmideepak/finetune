@@ -127,10 +127,13 @@ flowchart LR
 | 🥇 **Flan-T5-base, fine-tuned** | **0.868** | **0.877** | **0.68** |
 | Cascade: TF-IDF → Flan on 40% | 0.865 | — | 0.70 |
 | Flan-T5-large (780M), fine-tuned | 0.813 | — | 0.47 |
+| T5 v1.1 base, fine-tuned (no instruction tuning) | 0.786 | — | 0.53 |
 | Flan-T5-small, fine-tuned | 0.795 | — | 0.49 |
 | TF-IDF word+char SVM (same training rows as Flan) | 0.791 | 0.616 | 0.55 |
 | Flan-T5-large, zero-shot + policy guard | 0.750 | — | 0.48 |
+| SciBERT, 20-epoch small-data recipe | 0.702 | — | 0.14 |
 | SciBERT, generic fine-tune | 0.682 | — | 0.10 |
+| ByT5-small (byte-level), fine-tuned | ≈0.33 (2 of 5 folds; stopped) | — | ≤0.19 |
 | Trained on synthetic notes only | 0.599 | — | 0.24 |
 
 Flan-T5-base vs TF-IDF on the same rows: **+0.077** on CV (95% CI +0.016…+0.142, wins 5/5 folds), and ahead on **all 3 further independent splits** (+0.055, +0.062, +0.110; H16). With NEVER and UNKNOWN merged (removing SDOH-NLI's inconsistent NEVER labels) Flan still wins: **0.934 vs 0.878** (+0.057, CI +0.012…+0.104). Locked test: 0.877 vs 0.616, but that gap rests on 15 smoking-labelled premises (2 NEVER items carry ~64% of it), and validation showed no clear difference (0.846 vs 0.831) — treat the test gap as direction, not size.
@@ -176,6 +179,7 @@ Flan-T5-base vs TF-IDF on the same rows: **+0.077** on CV (95% CI +0.016…+0.14
 | H14 | Is bigger better? Flan-T5-large (780M) | No: 0.813 vs base 0.868 at this data size |
 | H15 | Locked Wright test, final pipelines | Confirmed: 0.965 (Flan) / 0.967 (TF-IDF), CURRENT recall 0.994 |
 | H16 | Does the human-text win survive new random splits? | Yes: Flan ahead on 4/4 splits (+0.055…+0.110), 16/20 folds |
+| H17 | Wider field: T5 v1.1 (no instruction tuning), ByT5, SciBERT 20 epochs | Flan-T5-base stays first; instruction tuning is what matters (−0.081 without it) |
 
 Write-ups: [`experiments/*/analysis.md`](experiments) · leaderboard: [`experiments/sdoh-cv-leaderboard.json`](experiments/sdoh-cv-leaderboard.json) · E-wave-1: [`docs/results/e-wave-1-results-2026-10-29.md`](docs/results/e-wave-1-results-2026-10-29.md)
 

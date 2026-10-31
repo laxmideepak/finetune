@@ -18,6 +18,8 @@ What is the smallest, most accurate, most economical open-source model and train
 
 ## Key Results
 
+- **H17 (2026-10-31) — instruction tuning is the active ingredient.** The same 250M T5 architecture without Flan instruction tuning (T5 v1.1 LM-adapted) scores 0.786 — like bag-of-words — vs 0.868 for Flan-T5-base (Δ −0.081 [−0.134, −0.035]). SciBERT with a 20-epoch small-data recipe reaches only 0.702; ByT5-small fails under the subword recipe. Flan-T5-base remains first across every lightweight model reachable here.
+
 - **H16 (2026-10-30) — the advantage survives re-splitting.** On three new independent 5-fold splits of SDOH-NLI, fine-tuned Flan-T5-base beats like-for-like TF-IDF every time (Δ +0.055 / +0.062 / +0.110; with the original split, 4/4 splits and 16/20 folds). Merging NEVER+UNKNOWN shrinks the gap to +0.005…+0.057, so Flan's value is mainly in the hard denial / never-smoked language, with a small consistent edge on CURRENT vs FORMER.
 
 - **H15 (2026-10-30) — held-out confirmation on synthetic notes.** On the never-scored Wright test split (600 notes), the Flan-T5-base pipeline scores **0.965** one-year macro-F1 and the TF-IDF pipeline 0.967 (CURRENT recall 0.994 both; 599/600 status). Dev→test drop is small (0.972→0.965). Combined with H12, Flan-T5-base is better on human-written text and equal on synthetic notes.
