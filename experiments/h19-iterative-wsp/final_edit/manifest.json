@@ -1,0 +1,28 @@
+{
+ "heads": [
+  [
+   19,
+   1
+  ],
+  [
+   19,
+   7
+  ],
+  [
+   22,
+   1
+  ]
+ ],
+ "beta": 309.69688915821223,
+ "tensors": [
+  "decoder.block.19.layer.1.EncDecAttention.v.weight",
+  "decoder.block.22.layer.1.EncDecAttention.v.weight"
+ ],
+ "changed_entries": 196608,
+ "total_weights": 848948224,
+ "share_changed": 0.00023159009518111673,
+ "formula": "Wv_h <- Wv_h - beta * a_h w_hat^T, a_h = unit(Wo_h^T d_never_unknown projected orthogonal to Wo_h^T d_current_unknown and Wo_h^T d_former_unknown); w = shrinkage-LDA(lambda 0.5) denial-vs-never direction at the never option token, orthogonalised against the mean option state, the N/A state, and the current/former mean offsets",
+ "rebuild": "scripts/wsp_edit_lib.py build_selective(W, w, d, [dc, df], beta)",
+ "matches_saved_edit": true,
+ "passes_used": 22
+}
