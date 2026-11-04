@@ -1,0 +1,80 @@
+{"time": "2026-11-04T21:50:39", "kind": "explanation", "text": "Turn 1: baseline. Run the unedited model on all development premises that have evidence, to see which classes it confuses and save per-item predictions for the analysis."}
+{"time": "2026-11-04T21:57:06", "kind": "forward", "pass": 1, "which": "original", "mode": "predict", "n": 195, "why": "baseline predictions on development evidence"}
+{"time": "2026-11-04T21:57:47", "kind": "explanation", "text": "Turn 2: find which decoder parts push 'never smoked' over 'unknown'. Read the answer tokens and the output-matrix direction d = W_U[never] - W_U[unknown] from the weights; then one activation pass records, for denial-only, true-never and correctly-unknown denials, each decoder sublayer's output at the first answer position, so I can see which sublayers write along d."}
+{"time": "2026-11-04T21:58:39", "kind": "forward", "pass": 2, "which": "original", "mode": "activations", "n": 106, "why": "decoder sublayer outputs at first answer position for denial (wrong/right) vs true never"}
+{"time": "2026-11-04T21:59:10", "kind": "explanation", "text": "Turn 3: record per-token encoder outputs and the query inputs of decoder cross-attention in blocks 19 and 22 (first answer position) for the same 106 texts, so I can compute each head's attention and its push along d from the weights."}
+{"time": "2026-11-04T21:59:47", "kind": "forward", "pass": 3, "which": "original", "mode": "activations", "n": 106, "why": "per-token encoder states + cross-attn queries (blocks 19, 22)"}
+{"time": "2026-11-04T22:00:05", "kind": "explanation", "text": "Turn 4 (analysis only, no pass): per-head decomposition of decoder block 19/22 cross-attention along d, and which input tokens the strongest heads attend to."}
+{"time": "2026-11-04T22:01:00", "kind": "explanation", "text": "Turn 5 (analysis only): at the encoder state of the 'never' OPTION token (last '\u2581never' in the prompt), is there a direction separating denial-only from true-never premises? Check mean-difference direction, its in-sample AUC and a leave-one-out version."}
+{"time": "2026-11-04T22:01:51", "kind": "explanation", "text": "Turn 6: rank-1 edit of the value weights of cross-attention heads 19.1, 19.7, 22.1: dWv_h = -beta a_h w^T with a_h the head-value direction that writes 'never minus unknown' and w the denial-vs-never direction read at the 'never' option token. beta=16.82 set analytically so one s.d. of the projection shifts the never-unknown logit by about 1.5. Test original vs edited on all development premises with evidence."}
+{"time": "2026-11-04T22:01:51", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 6 rank-1 value edit (heads 19.1, 19.7, 22.1)"}
+{"time": "2026-11-04T22:01:51", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 6 rank-1 value edit (heads 19.1, 19.7, 22.1)"}
+{"time": "2026-11-04T22:02:48", "kind": "forward", "pass": 4, "which": "edited", "mode": "predict", "n": 195, "why": "edited (beta=16.82) on all development evidence"}
+{"time": "2026-11-04T22:03:12", "kind": "explanation", "text": "Turn 7: the turn-6 edit moved the calibration reference ('N/A' input) too, so the effect cancelled. Record the encoder state at the 'never' option token for the 'N/A' input (1 text), then orthogonalise the direction against the mean option state and the N/A state so the edit only measures differences between sentences. Re-test on development premises."}
+{"time": "2026-11-04T22:03:17", "kind": "forward", "pass": 5, "which": "original", "mode": "activations", "n": 1, "why": "encoder state for calibration input N/A"}
+{"time": "2026-11-04T22:03:33", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 7 centred rank-1 value edit"}
+{"time": "2026-11-04T22:03:33", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 7 centred rank-1 value edit"}
+{"time": "2026-11-04T22:04:28", "kind": "forward", "pass": 6, "which": "edited", "mode": "predict", "n": 195, "why": "centred edit beta=31.26"}
+{"time": "2026-11-04T22:05:06", "kind": "explanation", "text": "Turn 8: same centred edit at 2x strength (beta=62.5); does a stronger push move the near-zero denials without breaking true never?"}
+{"time": "2026-11-04T22:05:06", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 8 centred edit x2"}
+{"time": "2026-11-04T22:05:06", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 8 centred edit x2"}
+{"time": "2026-11-04T22:06:02", "kind": "forward", "pass": 7, "which": "edited", "mode": "predict", "n": 195, "why": "centred edit x2"}
+{"time": "2026-11-04T22:06:02", "kind": "explanation", "text": "Turn 8: same centred edit at 4x strength (beta=125.0); does a stronger push move the near-zero denials without breaking true never?"}
+{"time": "2026-11-04T22:06:02", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 8 centred edit x4"}
+{"time": "2026-11-04T22:06:02", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 8 centred edit x4"}
+{"time": "2026-11-04T22:06:55", "kind": "forward", "pass": 8, "which": "edited", "mode": "predict", "n": 195, "why": "centred edit x4"}
+{"time": "2026-11-04T22:07:20", "kind": "explanation", "text": "Turn 9: same centred edit at 8.0x strength (beta=250.1); does a stronger push move the near-zero denials without breaking true never?"}
+{"time": "2026-11-04T22:07:21", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 9 centred edit x8.0"}
+{"time": "2026-11-04T22:07:21", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 9 centred edit x8.0"}
+{"time": "2026-11-04T22:08:20", "kind": "forward", "pass": 9, "which": "edited", "mode": "predict", "n": 195, "why": "centred edit x8.0"}
+{"time": "2026-11-04T22:08:20", "kind": "explanation", "text": "Turn 9: same centred edit at 12.0x strength (beta=375.1); does a stronger push move the near-zero denials without breaking true never?"}
+{"time": "2026-11-04T22:08:20", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 9 centred edit x12.0"}
+{"time": "2026-11-04T22:08:20", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 9 centred edit x12.0"}
+{"time": "2026-11-04T22:09:15", "kind": "forward", "pass": 10, "which": "edited", "mode": "predict", "n": 195, "why": "centred edit x12.0"}
+{"time": "2026-11-04T22:09:54", "kind": "explanation", "text": "Turn 10: selective edit at x4.0: the value direction is made orthogonal to the current-unknown and former-unknown answer directions, so the change can only move never vs unknown."}
+{"time": "2026-11-04T22:09:55", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 10 selective edit x4.0"}
+{"time": "2026-11-04T22:09:55", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 10 selective edit x4.0"}
+{"time": "2026-11-04T22:10:49", "kind": "forward", "pass": 11, "which": "edited", "mode": "predict", "n": 195, "why": "selective edit x4.0"}
+{"time": "2026-11-04T22:10:49", "kind": "explanation", "text": "Turn 10: selective edit at x8.0: the value direction is made orthogonal to the current-unknown and former-unknown answer directions, so the change can only move never vs unknown."}
+{"time": "2026-11-04T22:10:49", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 10 selective edit x8.0"}
+{"time": "2026-11-04T22:10:49", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 10 selective edit x8.0"}
+{"time": "2026-11-04T22:11:45", "kind": "forward", "pass": 12, "which": "edited", "mode": "predict", "n": 195, "why": "selective edit x8.0"}
+{"time": "2026-11-04T22:12:11", "kind": "explanation", "text": "Turn 11: selective edit at x12.0: the value direction is made orthogonal to the current-unknown and former-unknown answer directions, so the change can only move never vs unknown."}
+{"time": "2026-11-04T22:12:11", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 11 selective edit x12.0"}
+{"time": "2026-11-04T22:12:11", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 11 selective edit x12.0"}
+{"time": "2026-11-04T22:13:08", "kind": "forward", "pass": 13, "which": "edited", "mode": "predict", "n": 195, "why": "selective edit x12.0"}
+{"time": "2026-11-04T22:13:08", "kind": "explanation", "text": "Turn 11: selective edit at x16.0: the value direction is made orthogonal to the current-unknown and former-unknown answer directions, so the change can only move never vs unknown."}
+{"time": "2026-11-04T22:13:08", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 11 selective edit x16.0"}
+{"time": "2026-11-04T22:13:08", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 11 selective edit x16.0"}
+{"time": "2026-11-04T22:14:02", "kind": "forward", "pass": 14, "which": "edited", "mode": "predict", "n": 195, "why": "selective edit x16.0"}
+{"time": "2026-11-04T22:14:21", "kind": "explanation", "text": "Turn 12 (analysis only): compare the mean-difference direction with closed-form shrinkage discriminant directions at the 'never' option token, by leave-one-out separation of denial vs never (no model run)."}
+{"time": "2026-11-04T22:15:36", "kind": "explanation", "text": "Turn 13: selective edit with the shrinkage-discriminant direction (lambda 0.5, centred) at x2.0 (beta=160.1)."}
+{"time": "2026-11-04T22:15:36", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 13 LDA selective edit x2.0"}
+{"time": "2026-11-04T22:15:36", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 13 LDA selective edit x2.0"}
+{"time": "2026-11-04T22:16:30", "kind": "forward", "pass": 15, "which": "edited", "mode": "predict", "n": 195, "why": "LDA selective edit x2.0"}
+{"time": "2026-11-04T22:16:30", "kind": "explanation", "text": "Turn 13: selective edit with the shrinkage-discriminant direction (lambda 0.5, centred) at x4.0 (beta=320.2)."}
+{"time": "2026-11-04T22:16:30", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 13 LDA selective edit x4.0"}
+{"time": "2026-11-04T22:16:30", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 13 LDA selective edit x4.0"}
+{"time": "2026-11-04T22:17:25", "kind": "forward", "pass": 16, "which": "edited", "mode": "predict", "n": 195, "why": "LDA selective edit x4.0"}
+{"time": "2026-11-04T22:17:25", "kind": "explanation", "text": "Turn 13: selective edit with the shrinkage-discriminant direction (lambda 0.5, centred) at x8.0 (beta=640.4)."}
+{"time": "2026-11-04T22:17:25", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 13 LDA selective edit x8.0"}
+{"time": "2026-11-04T22:17:25", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 13 LDA selective edit x8.0"}
+{"time": "2026-11-04T22:18:21", "kind": "forward", "pass": 17, "which": "edited", "mode": "predict", "n": 195, "why": "LDA selective edit x8.0"}
+{"time": "2026-11-04T22:18:43", "kind": "explanation", "text": "Turn 14: record encoder states at the 'never' option token for CURRENT and FORMER development premises (1 pass), then make the discriminant direction neutral for them: remove its components along (mean_current - mean_all) and (mean_former - mean_all) as well as the shared and N/A components."}
+{"time": "2026-11-04T22:19:12", "kind": "forward", "pass": 18, "which": "original", "mode": "activations", "n": 75, "why": "never-option encoder states for CURRENT/FORMER premises"}
+{"time": "2026-11-04T22:19:42", "kind": "explanation", "text": "Turn 15: selective edit with the neutral discriminant direction (also neutral for current/former) at x2.0 (beta=154.8)."}
+{"time": "2026-11-04T22:19:42", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 15 neutral LDA selective edit x2.0"}
+{"time": "2026-11-04T22:19:42", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 15 neutral LDA selective edit x2.0"}
+{"time": "2026-11-04T22:20:39", "kind": "forward", "pass": 19, "which": "edited", "mode": "predict", "n": 195, "why": "LDA selective edit x2.0"}
+{"time": "2026-11-04T22:20:39", "kind": "explanation", "text": "Turn 15: selective edit with the neutral discriminant direction (also neutral for current/former) at x4.0 (beta=309.7)."}
+{"time": "2026-11-04T22:20:39", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 15 neutral LDA selective edit x4.0"}
+{"time": "2026-11-04T22:20:39", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 15 neutral LDA selective edit x4.0"}
+{"time": "2026-11-04T22:21:32", "kind": "forward", "pass": 20, "which": "edited", "mode": "predict", "n": 195, "why": "LDA selective edit x4.0"}
+{"time": "2026-11-04T22:21:32", "kind": "explanation", "text": "Turn 15: selective edit with the neutral discriminant direction (also neutral for current/former) at x6.0 (beta=464.5)."}
+{"time": "2026-11-04T22:21:32", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 15 neutral LDA selective edit x6.0"}
+{"time": "2026-11-04T22:21:32", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 15 neutral LDA selective edit x6.0"}
+{"time": "2026-11-04T22:22:24", "kind": "forward", "pass": 21, "which": "edited", "mode": "predict", "n": 195, "why": "LDA selective edit x6.0"}
+{"time": "2026-11-04T22:23:05", "kind": "save_edit", "name": "decoder.block.19.layer.1.EncDecAttention.v.weight", "changed_entries": 131072, "why": "turn 16: keep the neutral discriminant edit at x4 (best on development)"}
+{"time": "2026-11-04T22:23:05", "kind": "save_edit", "name": "decoder.block.22.layer.1.EncDecAttention.v.weight", "changed_entries": 65536, "why": "turn 16: keep the neutral discriminant edit at x4 (best on development)"}
+{"time": "2026-11-04T22:23:05", "kind": "explanation", "text": "Turn 16: keep edit 1 (x4). Second failure: CURRENT premises read as FORMER. One activation pass on CURRENT and FORMER development premises with edit 1 applied: decoder sublayer outputs at the first answer position, the cross-attention query inputs, and per-token encoder states, to find which heads push 'former' over 'current' and what they read."}
+{"time": "2026-11-04T22:23:28", "kind": "forward", "pass": 22, "which": "edited", "mode": "activations", "n": 71, "why": "current-vs-former analysis with edit 1 applied"}
