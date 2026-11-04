@@ -1,0 +1,131 @@
+{
+ "n": 223,
+ "label_counts": {
+  "UNKNOWN": 180,
+  "CURRENT": 24,
+  "FORMER": 15,
+  "NEVER": 4
+ },
+ "arms": {
+  "Flan-T5-large zero-shot": {
+   "macro_f1": 0.619,
+   "per_class_f1": {
+    "CURRENT": 0.638,
+    "FORMER": 0.769,
+    "NEVER": 0.182,
+    "UNKNOWN": 0.887
+   },
+   "by_part": {
+    "train-fold0": 0.7069,
+    "validation": 0.5287
+   }
+  },
+  "zero-shot + rule guard": {
+   "macro_f1": 0.6337,
+   "per_class_f1": {
+    "CURRENT": 0.638,
+    "FORMER": 0.769,
+    "NEVER": 0.182,
+    "UNKNOWN": 0.946
+   },
+   "by_part": {
+    "train-fold0": 0.7355,
+    "validation": 0.5035
+   },
+   "delta_vs_zero_shot": {
+    "mean": 0.0147,
+    "ci95": [
+     -0.0532,
+     0.0898
+    ]
+   }
+  },
+  "Flan-T5-large + iterative weight edit": {
+   "macro_f1": 0.673,
+   "per_class_f1": {
+    "CURRENT": 0.652,
+    "FORMER": 0.757,
+    "NEVER": 0.348,
+    "UNKNOWN": 0.935
+   },
+   "by_part": {
+    "train-fold0": 0.7524,
+    "validation": 0.5709
+   },
+   "delta_vs_zero_shot": {
+    "mean": 0.054,
+    "ci95": [
+     0.0031,
+     0.105
+    ]
+   }
+  },
+  "weight edit + rule guard (exploratory)": {
+   "macro_f1": 0.6883,
+   "per_class_f1": {
+    "CURRENT": 0.652,
+    "FORMER": 0.757,
+    "NEVER": 0.4,
+    "UNKNOWN": 0.944
+   },
+   "by_part": {
+    "train-fold0": 0.7699,
+    "validation": 0.5174
+   },
+   "delta_vs_zero_shot": {
+    "mean": 0.0692,
+    "ci95": [
+     -0.0575,
+     0.2219
+    ]
+   }
+  },
+  "Flan-T5-base fine-tuned (same dev data)": {
+   "macro_f1": 0.7861,
+   "per_class_f1": {
+    "CURRENT": 0.917,
+    "FORMER": 0.903,
+    "NEVER": 0.353,
+    "UNKNOWN": 0.971
+   },
+   "by_part": {
+    "train-fold0": 0.7936,
+    "validation": 0.7765
+   },
+   "delta_vs_zero_shot": {
+    "mean": 0.167,
+    "ci95": [
+     0.0843,
+     0.254
+    ]
+   }
+  },
+  "TF-IDF (same dev data)": {
+   "macro_f1": 0.7686,
+   "per_class_f1": {
+    "CURRENT": 0.8,
+    "FORMER": 0.897,
+    "NEVER": 0.4,
+    "UNKNOWN": 0.978
+   },
+   "by_part": {
+    "train-fold0": 0.7524,
+    "validation": 0.8231
+   },
+   "delta_vs_zero_shot": {
+    "mean": 0.1496,
+    "ci95": [
+     0.0264,
+     0.2635
+    ]
+   }
+  }
+ },
+ "edit_minus_finetuned": {
+  "mean": -0.1131,
+  "ci95": [
+   -0.2113,
+   -0.0136
+  ]
+ }
+}
